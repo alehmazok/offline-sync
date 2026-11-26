@@ -1,0 +1,6 @@
+analyzer:
+  exclude:
+    - lib/src/rust/**
+    - example/**
+    # cargokit's build tool is a separate Dart package with its own deps.
+    - cargokit/**

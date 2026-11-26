@@ -19,3 +19,4 @@ library offline_sync;
 export 'src/rust/api/engine.dart';
 export 'src/rust/frb_generated.dart' show RustLib;
 export 'src/scheduler.dart';
+export 'src/streams.dart';

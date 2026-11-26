@@ -10,7 +10,8 @@ when a connection is available.
 **Status:** engine implemented and tested. The protocol, reference
 server, conformance suite, local store, sync engine and a binding facade
 are built; all tests pass, including a long randomised convergence test.
-The Flutter package is written but not yet generated or run on a device.
+The Flutter package builds for Android and iOS and passes its end-to-end
+test on an Android emulator; it has not yet run on physical phones.
 No real backend or app uses it yet. See
 [implementation progress](docs/06-implementation-plan.md#66-progress).
 
@@ -72,5 +73,5 @@ crates/
   sync-refserver/     reference server used in tests
   sync-conformance/   protocol test suite that runs against any server URL
 bindings/
-  flutter/            Dart package (flutter_rust_bridge); not yet generated
+  flutter/            Dart package (flutter_rust_bridge) and a two-device example app
 ```

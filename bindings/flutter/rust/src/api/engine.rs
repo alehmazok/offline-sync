@@ -4,18 +4,29 @@
 //! token providers, and stream sinks become listeners. All logic lives in
 //! the engine.
 //!
-//! Every function here is async from Dart (none is marked `#[frb(sync)]`),
-//! so it runs on a Rust worker thread. That matters: the token callback is
+//! Streams are opened with the `subscribe_*` functions under an ID chosen
+//! by Dart, and closed with [`SyncEngine::unsubscribe`]. App code does not
+//! call these: `lib/src/streams.dart` wraps them as `watch`, `statusStream`,
+//! `eventStream` and `tablesChangedStream`, whose cancel calls
+//! `unsubscribe`. Dropping the registration drops the Rust sink, which
+//! closes the Dart stream; without that, cancelling a bridge stream only
+//! completes when Rust next sends to it.
+//!
+//! As a fallback, a registration whose Dart stream is gone without an
+//! `unsubscribe` is dropped after a send to it fails.
+//!
+//! Every function except `new_id` is async from Dart, so it runs on a Rust worker thread. That matters: the token callback is
 //! Dart code, and the engine waits for it; on the Dart main thread that
 //! wait would deadlock.
 
+use crate::adapter::{DartTokens, Dead, Listener, Reaper, RowsSink, Subscriptions};
 use crate::frb_generated::StreamSink;
 use flutter_rust_bridge::{frb, DartFnFuture};
 use std::sync::{Arc, Mutex};
+use sync_ffi::FfiEngine;
 pub use sync_ffi::{
     FfiConfig, FfiError, FfiEvent, FfiReport, FfiRows, FfiStatement, FfiStatus, FfiValue,
 };
-use sync_ffi::{FfiEngine, FfiListener, FfiTokenProvider, FfiWatcher};
 
 // Mirrors of the facade's plain types, so the bridge generates Dart
 // classes for them.
@@ -87,63 +98,11 @@ pub struct _FfiError {
     pub message: String,
 }
 
-type DartTokenFn = dyn Fn(bool) -> DartFnFuture<String> + Send + Sync;
-
-struct DartTokens(Box<DartTokenFn>);
-
-impl FfiTokenProvider for DartTokens {
-    fn token(&self, force_refresh: bool) -> Result<String, String> {
-        let token = futures::executor::block_on((self.0)(force_refresh));
-        if token.is_empty() {
-            Err("no token".into())
-        } else {
-            Ok(token)
-        }
-    }
-}
-
-#[derive(Default)]
-struct Sinks {
-    status: Option<Mutex<StreamSink<FfiStatus>>>,
-    events: Option<Mutex<StreamSink<FfiEvent>>>,
-    tables: Option<Mutex<StreamSink<Vec<String>>>>,
-}
-
-impl FfiListener for Sinks {
-    fn on_status(&self, s: FfiStatus) {
-        if let Some(sink) = &self.status {
-            let _ = sink.lock().unwrap().add(s);
-        }
-    }
-    fn on_event(&self, e: FfiEvent) {
-        if let Some(sink) = &self.events {
-            let _ = sink.lock().unwrap().add(e);
-        }
-    }
-    fn on_tables_changed(&self, t: Vec<String>) {
-        if let Some(sink) = &self.tables {
-            let _ = sink.lock().unwrap().add(t);
-        }
-    }
-}
-
-struct RowsSink(Mutex<StreamSink<FfiRows>>);
-
-impl FfiWatcher for RowsSink {
-    fn on_rows(&self, rows: FfiRows) {
-        let _ = self.0.lock().unwrap().add(rows);
-    }
-    fn on_error(&self, message: String) {
-        let _ = self.0.lock().unwrap().add_error(FfiError {
-            code: "database".into(),
-            message,
-        });
-    }
-}
-
 #[frb(opaque)]
 pub struct SyncEngine {
     inner: FfiEngine,
+    reaper: Arc<Reaper>,
+    subscriptions: Mutex<Subscriptions>,
 }
 
 impl SyncEngine {
@@ -156,66 +115,138 @@ impl SyncEngine {
         let tokens = Arc::new(DartTokens(Box::new(token_provider)));
         Ok(SyncEngine {
             inner: FfiEngine::open(config, tokens)?,
+            reaper: Arc::new(Reaper::default()),
+            subscriptions: Mutex::new(Subscriptions::default()),
         })
     }
 
-    pub fn execute(&self, sql: String, params: Vec<FfiValue>) -> Result<u64, FfiError> {
-        self.inner.execute(sql, params)
+    fn unregister(&self, d: Dead) {
+        match d {
+            Dead::Watch(id) => self.inner.unwatch(id),
+            Dead::Listener(id) => self.inner.remove_listener(id),
+        }
     }
 
+    /// Drop watches and listeners whose Dart streams went away without an
+    /// `unsubscribe`.
+    fn reap(&self) {
+        let dead = self.reaper.take();
+        if dead.is_empty() {
+            return;
+        }
+        let mut subs = self.subscriptions.lock().unwrap();
+        subs.active.retain(|_, d| !dead.contains(d));
+        drop(subs);
+        for d in dead {
+            self.unregister(d);
+        }
+    }
+
+    /// Record a new registration under the Dart ID, or drop it at once if
+    /// Dart already cancelled it.
+    fn track(&self, subscription: i64, d: Dead) {
+        let mut subs = self.subscriptions.lock().unwrap();
+        if subs.cancelled_early.remove(&subscription) {
+            drop(subs);
+            self.unregister(d);
+        } else {
+            subs.active.insert(subscription, d);
+        }
+    }
+
+    /// Close a stream opened with a `subscribe_*` function. Its Dart stream
+    /// then ends.
+    pub fn unsubscribe(&self, subscription: i64) {
+        let mut subs = self.subscriptions.lock().unwrap();
+        match subs.active.remove(&subscription) {
+            Some(d) => {
+                drop(subs);
+                self.unregister(d);
+            }
+            None => {
+                subs.cancelled_early.insert(subscription);
+            }
+        }
+    }
+
+    /// Run a statement that changes data; returns the number of rows changed.
+    pub fn execute(&self, sql: String, params: Vec<FfiValue>) -> Result<i64, FfiError> {
+        self.reap();
+        Ok(self.inner.execute(sql, params)? as i64)
+    }
+
+    /// Run several statements in one transaction.
     pub fn write_batch(&self, statements: Vec<FfiStatement>) -> Result<(), FfiError> {
+        self.reap();
         self.inner.write_batch(statements)
     }
 
     pub fn query(&self, sql: String, params: Vec<FfiValue>) -> Result<FfiRows, FfiError> {
+        self.reap();
         self.inner.query(sql, params)
     }
 
     /// Emits the query result now and again whenever a table it reads
-    /// changes. Returns an ID for [`SyncEngine::unwatch`].
-    pub fn watch(
+    /// changes. Use `watch` from Dart.
+    pub fn subscribe_watch(
         &self,
+        subscription: i64,
         sql: String,
         params: Vec<FfiValue>,
         sink: StreamSink<FfiRows>,
-    ) -> Result<u64, FfiError> {
-        self.inner
-            .watch(sql, params, Arc::new(RowsSink(Mutex::new(sink))))
-    }
-
-    pub fn unwatch(&self, id: u64) {
-        self.inner.unwatch(id)
+    ) -> Result<(), FfiError> {
+        self.reap();
+        let watcher = RowsSink::new(sink, self.reaper.clone());
+        let id = self.inner.watch(sql, params, watcher.clone())?;
+        watcher.set_id(id);
+        drop(watcher);
+        self.track(subscription, Dead::Watch(id));
+        Ok(())
     }
 
     pub fn sync_now(&self) -> Result<FfiReport, FfiError> {
+        self.reap();
         self.inner.sync_now()
     }
 
     pub fn status(&self) -> FfiStatus {
+        self.reap();
         self.inner.status()
     }
 
-    pub fn status_stream(&self, sink: StreamSink<FfiStatus>) {
-        self.inner.add_listener(Arc::new(Sinks {
-            status: Some(Mutex::new(sink)),
-            ..Sinks::default()
-        }));
+    /// Status changes. Use `statusStream` from Dart.
+    pub fn subscribe_status(&self, subscription: i64, sink: StreamSink<FfiStatus>) {
+        self.reap();
+        let l = Listener::status(sink, self.reaper.clone());
+        let id = self.inner.add_listener(l.clone());
+        l.set_id(id);
+        drop(l);
+        self.track(subscription, Dead::Listener(id));
     }
 
-    pub fn event_stream(&self, sink: StreamSink<FfiEvent>) {
-        self.inner.add_listener(Arc::new(Sinks {
-            events: Some(Mutex::new(sink)),
-            ..Sinks::default()
-        }));
+    /// Things to show the user, such as `change_rejected` and
+    /// `upgrade_required`. Use `eventStream` from Dart.
+    pub fn subscribe_events(&self, subscription: i64, sink: StreamSink<FfiEvent>) {
+        self.reap();
+        let l = Listener::events(sink, self.reaper.clone());
+        let id = self.inner.add_listener(l.clone());
+        l.set_id(id);
+        drop(l);
+        self.track(subscription, Dead::Listener(id));
     }
 
-    pub fn tables_changed_stream(&self, sink: StreamSink<Vec<String>>) {
-        self.inner.add_listener(Arc::new(Sinks {
-            tables: Some(Mutex::new(sink)),
-            ..Sinks::default()
-        }));
+    /// Names of tables changed by local writes or by sync. Use
+    /// `tablesChangedStream` from Dart.
+    pub fn subscribe_tables(&self, subscription: i64, sink: StreamSink<Vec<String>>) {
+        self.reap();
+        let l = Listener::tables(sink, self.reaper.clone());
+        let id = self.inner.add_listener(l.clone());
+        l.set_id(id);
+        drop(l);
+        self.track(subscription, Dead::Listener(id));
     }
 
+    /// A new record ID (UUIDv7).
     #[frb(sync)]
     pub fn new_id(&self) -> String {
         self.inner.new_id()
@@ -226,9 +257,11 @@ impl SyncEngine {
     }
 
     pub fn sign_out(&self, discard_pending: bool) -> Result<(), FfiError> {
+        self.reap();
         self.inner.sign_out(discard_pending)
     }
 
+    /// Sync state as JSON, for support. Contains no record data.
     pub fn debug_dump(&self) -> Result<String, FfiError> {
         self.inner.debug_dump()
     }
