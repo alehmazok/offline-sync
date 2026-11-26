@@ -20,11 +20,12 @@ Needs Flutter 3.35 or newer (Dart 3.9.2, required by flutter_rust_bridge
 ```
 rust/                   adapter crate: Dart callbacks and streams on top of sync-ffi
   src/api/engine.rs     the Dart-facing API (input to the code generator)
-  src/adapter.rs        token callback, stream sinks, cleanup of cancelled streams
+  src/adapter.rs        token callback, stream sinks, stream registrations
   src/frb_generated.rs  generated
   tests/                runs the example's sync setup over HTTP, no device needed
 lib/offline_sync.dart   public entry point
 lib/src/scheduler.dart  when to sync: foreground, after writes, on connectivity
+lib/src/streams.dart    watch() and the other streams, with prompt cancel
 lib/src/rust/           generated Dart (do not edit)
 android/ ios/ cargokit/ native build setup (from the bridge's plugin template)
 example/                two-device demo app and the end-to-end test
@@ -84,7 +85,7 @@ scheduler.notifyLocalWrite();
 final sub = engine.watch(sql: 'SELECT id, note FROM visits ORDER BY id', params: []).listen((rows) {
   // rows.columns, rows.rows (List<List<FfiValue>>)
 });
-await sub.cancel(); // the engine drops the watch on its next call
+await sub.cancel(); // unregisters the watch in the engine
 
 // Things to show the user.
 engine.eventStream().listen((e) {
@@ -106,8 +107,10 @@ Errors from the engine are thrown as `FfiError` with a stable `code`
   default.
 - Call `syncNow()` from a background task (the `workmanager` package, or
   BGTaskScheduler on iOS) if data should sync while the app is closed.
-- Cancel stream subscriptions you no longer need. A cancelled stream is
-  unregistered on the next call into the engine, not immediately.
+- Cancel stream subscriptions you no longer need; cancelling unregisters
+  them in the engine. Use `watch`, `statusStream`, `eventStream` and
+  `tablesChangedStream`, not the lower-level `subscribe*` methods, which
+  only stop when `unsubscribe` is called.
 
 ## Changing the Rust API
 

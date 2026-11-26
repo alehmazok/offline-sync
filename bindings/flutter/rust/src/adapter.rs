@@ -4,6 +4,7 @@
 
 use crate::frb_generated::StreamSink;
 use flutter_rust_bridge::DartFnFuture;
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use sync_ffi::{FfiError, FfiEvent, FfiListener, FfiRows, FfiStatus, FfiTokenProvider, FfiWatcher};
@@ -201,6 +202,15 @@ impl FfiWatcher for RowsSink {
             self.reg.mark_closed();
         }
     }
+}
+
+/// Stream registrations by the ID Dart gave them.
+#[derive(Default)]
+pub(crate) struct Subscriptions {
+    pub(crate) active: HashMap<i64, Dead>,
+    /// `unsubscribe` calls that arrived before their `subscribe_*` call
+    /// finished; the two run on different bridge worker threads.
+    pub(crate) cancelled_early: HashSet<i64>,
 }
 
 #[cfg(test)]

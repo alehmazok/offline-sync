@@ -4,19 +4,25 @@
 //! token providers, and stream sinks become listeners. All logic lives in
 //! the engine.
 //!
-//! Streams (`watch`, `status_stream`, `event_stream`,
-//! `tables_changed_stream`) clean up after themselves: cancel the Dart
-//! subscription and the registration is dropped on the next call into the
-//! engine.
+//! Streams are opened with the `subscribe_*` functions under an ID chosen
+//! by Dart, and closed with [`SyncEngine::unsubscribe`]. App code does not
+//! call these: `lib/src/streams.dart` wraps them as `watch`, `statusStream`,
+//! `eventStream` and `tablesChangedStream`, whose cancel calls
+//! `unsubscribe`. Dropping the registration drops the Rust sink, which
+//! closes the Dart stream; without that, cancelling a bridge stream only
+//! completes when Rust next sends to it.
+//!
+//! As a fallback, a registration whose Dart stream is gone without an
+//! `unsubscribe` is dropped after a send to it fails.
 //!
 //! Every function except `new_id` is async from Dart, so it runs on a Rust worker thread. That matters: the token callback is
 //! Dart code, and the engine waits for it; on the Dart main thread that
 //! wait would deadlock.
 
-use crate::adapter::{DartTokens, Dead, Listener, Reaper, RowsSink};
+use crate::adapter::{DartTokens, Dead, Listener, Reaper, RowsSink, Subscriptions};
 use crate::frb_generated::StreamSink;
 use flutter_rust_bridge::{frb, DartFnFuture};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use sync_ffi::FfiEngine;
 pub use sync_ffi::{
     FfiConfig, FfiError, FfiEvent, FfiReport, FfiRows, FfiStatement, FfiStatus, FfiValue,
@@ -96,6 +102,7 @@ pub struct _FfiError {
 pub struct SyncEngine {
     inner: FfiEngine,
     reaper: Arc<Reaper>,
+    subscriptions: Mutex<Subscriptions>,
 }
 
 impl SyncEngine {
@@ -109,15 +116,55 @@ impl SyncEngine {
         Ok(SyncEngine {
             inner: FfiEngine::open(config, tokens)?,
             reaper: Arc::new(Reaper::default()),
+            subscriptions: Mutex::new(Subscriptions::default()),
         })
     }
 
-    /// Drop watches and listeners whose Dart streams were cancelled.
+    fn unregister(&self, d: Dead) {
+        match d {
+            Dead::Watch(id) => self.inner.unwatch(id),
+            Dead::Listener(id) => self.inner.remove_listener(id),
+        }
+    }
+
+    /// Drop watches and listeners whose Dart streams went away without an
+    /// `unsubscribe`.
     fn reap(&self) {
-        for dead in self.reaper.take() {
-            match dead {
-                Dead::Watch(id) => self.inner.unwatch(id),
-                Dead::Listener(id) => self.inner.remove_listener(id),
+        let dead = self.reaper.take();
+        if dead.is_empty() {
+            return;
+        }
+        let mut subs = self.subscriptions.lock().unwrap();
+        subs.active.retain(|_, d| !dead.contains(d));
+        drop(subs);
+        for d in dead {
+            self.unregister(d);
+        }
+    }
+
+    /// Record a new registration under the Dart ID, or drop it at once if
+    /// Dart already cancelled it.
+    fn track(&self, subscription: i64, d: Dead) {
+        let mut subs = self.subscriptions.lock().unwrap();
+        if subs.cancelled_early.remove(&subscription) {
+            drop(subs);
+            self.unregister(d);
+        } else {
+            subs.active.insert(subscription, d);
+        }
+    }
+
+    /// Close a stream opened with a `subscribe_*` function. Its Dart stream
+    /// then ends.
+    pub fn unsubscribe(&self, subscription: i64) {
+        let mut subs = self.subscriptions.lock().unwrap();
+        match subs.active.remove(&subscription) {
+            Some(d) => {
+                drop(subs);
+                self.unregister(d);
+            }
+            None => {
+                subs.cancelled_early.insert(subscription);
             }
         }
     }
@@ -140,9 +187,10 @@ impl SyncEngine {
     }
 
     /// Emits the query result now and again whenever a table it reads
-    /// changes, until the Dart subscription is cancelled.
-    pub fn watch(
+    /// changes. Use `watch` from Dart.
+    pub fn subscribe_watch(
         &self,
+        subscription: i64,
         sql: String,
         params: Vec<FfiValue>,
         sink: StreamSink<FfiRows>,
@@ -151,6 +199,8 @@ impl SyncEngine {
         let watcher = RowsSink::new(sink, self.reaper.clone());
         let id = self.inner.watch(sql, params, watcher.clone())?;
         watcher.set_id(id);
+        drop(watcher);
+        self.track(subscription, Dead::Watch(id));
         Ok(())
     }
 
@@ -164,25 +214,36 @@ impl SyncEngine {
         self.inner.status()
     }
 
-    pub fn status_stream(&self, sink: StreamSink<FfiStatus>) {
+    /// Status changes. Use `statusStream` from Dart.
+    pub fn subscribe_status(&self, subscription: i64, sink: StreamSink<FfiStatus>) {
         self.reap();
         let l = Listener::status(sink, self.reaper.clone());
-        l.set_id(self.inner.add_listener(l.clone()));
+        let id = self.inner.add_listener(l.clone());
+        l.set_id(id);
+        drop(l);
+        self.track(subscription, Dead::Listener(id));
     }
 
     /// Things to show the user, such as `change_rejected` and
-    /// `upgrade_required`.
-    pub fn event_stream(&self, sink: StreamSink<FfiEvent>) {
+    /// `upgrade_required`. Use `eventStream` from Dart.
+    pub fn subscribe_events(&self, subscription: i64, sink: StreamSink<FfiEvent>) {
         self.reap();
         let l = Listener::events(sink, self.reaper.clone());
-        l.set_id(self.inner.add_listener(l.clone()));
+        let id = self.inner.add_listener(l.clone());
+        l.set_id(id);
+        drop(l);
+        self.track(subscription, Dead::Listener(id));
     }
 
-    /// Names of tables changed by local writes or by sync.
-    pub fn tables_changed_stream(&self, sink: StreamSink<Vec<String>>) {
+    /// Names of tables changed by local writes or by sync. Use
+    /// `tablesChangedStream` from Dart.
+    pub fn subscribe_tables(&self, subscription: i64, sink: StreamSink<Vec<String>>) {
         self.reap();
         let l = Listener::tables(sink, self.reaper.clone());
-        l.set_id(self.inner.add_listener(l.clone()));
+        let id = self.inner.add_listener(l.clone());
+        l.set_id(id);
+        drop(l);
+        self.track(subscription, Dead::Listener(id));
     }
 
     /// A new record ID (UUIDv7).

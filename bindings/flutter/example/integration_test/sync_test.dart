@@ -67,7 +67,7 @@ void main() {
     step('t1 wait seen');
     await seen.future.timeout(const Duration(seconds: 10));
     step('t1 cancel');
-    await sub.cancel();
+    await sub.cancel().timeout(const Duration(seconds: 5));
     step('t1 done');
   }, timeout: _limit);
 
@@ -115,7 +115,7 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 200));
     expect(phases, contains('idle'));
     step('t3a cancel');
-    await sub.cancel();
+    await sub.cancel().timeout(const Duration(seconds: 5));
     step('t3a done');
   }, timeout: _limit);
 
@@ -133,7 +133,7 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 200));
     expect(events, contains('scope_added'));
     step('t3b cancel');
-    await sub.cancel();
+    await sub.cancel().timeout(const Duration(seconds: 5));
     step('t3b done');
   }, timeout: _limit);
 
@@ -160,19 +160,33 @@ void main() {
     expect((await e.status()).pendingChanges, 0);
   }, timeout: _limit);
 
-  testWidgets('a cancelled watch does not break later writes', (_) async {
+  testWidgets('cancelling a watch completes and stops its updates', (_) async {
     final e = await device();
+    var updates = 0;
     final first = Completer<void>();
     final sub = e.watch(sql: notesQuery, params: []).listen((_) {
+      updates++;
       if (!first.isCompleted) first.complete();
     });
     await first.future.timeout(const Duration(seconds: 5));
-    await sub.cancel();
-    // The next write's notification fails to reach the closed stream; the
-    // write after it drops the registration. Neither may fail.
-    await addNote(e, 'after cancel 1 $run');
-    await addNote(e, 'after cancel 2 $run');
-    expect((await notes(e)).length, greaterThanOrEqualTo(2));
+    await sub.cancel().timeout(const Duration(seconds: 5));
+    final before = updates;
+    await addNote(e, 'after cancel $run');
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    expect(updates, before);
+    expect((await notes(e)).any((x) => x.title == 'after cancel $run'), isTrue);
+  }, timeout: _limit);
+
+  testWidgets('a stream cancelled before it emits is dropped', (_) async {
+    final e = await device();
+    // Cancel straight away: unsubscribe can reach Rust before subscribe.
+    for (var i = 0; i < 20; i++) {
+      final sub = e.statusStream().listen((_) {});
+      await sub.cancel().timeout(const Duration(seconds: 5));
+    }
+    // Still usable afterwards.
+    await e.syncNow();
+    expect((await e.status()).phase, 'idle');
   }, timeout: _limit);
 
   testWidgets('SQL errors arrive as FfiError', (_) async {
