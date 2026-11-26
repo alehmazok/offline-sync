@@ -345,6 +345,9 @@ pub struct ErrorDetail {
     pub code: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
+    /// With `upgrade_required`: the oldest schema version still served.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_schema_version: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -358,6 +361,7 @@ impl ErrorBody {
             error: ErrorDetail {
                 code: code.to_string(),
                 message: Some(message.into()),
+                min_schema_version: None,
             },
         }
     }

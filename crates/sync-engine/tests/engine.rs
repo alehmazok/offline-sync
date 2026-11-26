@@ -143,22 +143,6 @@ fn unsent_edit_survives_a_pull_of_newer_data() {
     assert_eq!(server_dump(&s, "team:1")[&("items".into(), id)], expected);
 }
 
-/// Make a local write the moment the first pull request goes out, so the
-/// pulled page meets an unsent local edit.
-fn write_during_pull(d: &Device, sql: &'static str, id: String) {
-    let engine = d.e().clone();
-    let done = Arc::new(std::sync::atomic::AtomicBool::new(false));
-    *d.transport.intercept.lock().unwrap() = Some(Box::new(move |req| {
-        if req.method == sync_core::http::Method::Get
-            && req.path.ends_with("/changes")
-            && !done.swap(true, std::sync::atomic::Ordering::SeqCst)
-        {
-            engine.execute(sql, &[id.clone().into()]).unwrap();
-        }
-        None
-    }));
-}
-
 #[test]
 fn pulled_record_meets_unsent_edit_field_merge() {
     let s = server();
@@ -169,7 +153,7 @@ fn pulled_record_meets_unsent_edit_field_merge() {
     write_during_pull(
         &a,
         "UPDATE items SET note = 'local' WHERE id = ?1",
-        id.clone(),
+        vec![id.clone().into()],
     );
     a.sync();
     let expected = json!({"title": "t", "qty": 2, "note": "local"});
@@ -196,7 +180,11 @@ fn pulled_record_meets_unsent_edit_server_wins() {
     );
     a.sync();
     admin_write(&s, "team:1", "locked", &id, Some(json!({"title": "admin"})));
-    write_during_pull(&a, "UPDATE locked SET qty = 5 WHERE id = ?1", id.clone());
+    write_during_pull(
+        &a,
+        "UPDATE locked SET qty = 5 WHERE id = ?1",
+        vec![id.clone().into()],
+    );
     let r = a.sync();
     assert_eq!(r.conflicts, 1);
     assert_eq!(a.unsent(), 0, "the stale edit is dropped");

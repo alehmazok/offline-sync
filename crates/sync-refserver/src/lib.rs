@@ -190,11 +190,9 @@ impl RefServer {
                 )
             })?;
         if v < self.config.min_schema_version {
-            return Err(error(
-                426,
-                error_code::UPGRADE_REQUIRED,
-                "client schema is too old",
-            ));
+            let mut body = ErrorBody::new(error_code::UPGRADE_REQUIRED, "client schema is too old");
+            body.error.min_schema_version = Some(self.config.min_schema_version);
+            return Err(HttpResponse::json(426, &body));
         }
         if v > self.config.schema_version {
             return Err(error(

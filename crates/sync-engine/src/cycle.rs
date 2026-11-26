@@ -136,6 +136,9 @@ impl Inner {
                     if !resync.contains(&e.scope) {
                         resync.push(e.scope.clone());
                     }
+                    // Forget the row's version so the download rewrites it
+                    // even though the server copy has not changed.
+                    state::delete_row_state(tx, &e.table, &e.row_id)?;
                     "read_only_scope"
                 } else {
                     if let Some(spec) = manifest.table(&e.table) {
@@ -251,6 +254,8 @@ impl Inner {
                         let req: PushRequest = serde_json::from_str(&b.body)?;
                         if let Some((c, (_, seqs))) = req.changes.first().zip(b.map.first()) {
                             state::delete_entries(tx, seqs)?;
+                            state::delete_pending_for_row(tx, &c.table, &c.id)?;
+                            state::delete_row_state(tx, &c.table, &c.id)?;
                             report.rejected += 1;
                             events.push(SyncEvent::ChangeRejected {
                                 table: c.table.clone(),
@@ -258,6 +263,9 @@ impl Inner {
                                 code: "too_large".into(),
                                 message: "the change is larger than the server accepts".into(),
                             });
+                            // There is no server record to restore the row
+                            // from, so download the scope again.
+                            start_resync(tx, &b.scope, events)?;
                         }
                     }
                     state::finish_batch(tx, b.batch_id)?;

@@ -139,8 +139,9 @@ pub enum ClientError {
     CursorExpired,
     #[error("request too large")]
     TooLarge,
+    /// With the oldest schema version the server still serves, if it said.
     #[error("app update required")]
-    UpgradeRequired,
+    UpgradeRequired(Option<i64>),
     #[error("bad request: {0}")]
     BadRequest(String),
     #[error("unreadable response: {0}")]
@@ -299,6 +300,7 @@ impl Client {
                 }
                 Ok(resp) => {
                     let detail: Option<ErrorBody> = serde_json::from_slice(&resp.body).ok();
+                    let min_schema = detail.as_ref().and_then(|d| d.error.min_schema_version);
                     let code = detail
                         .as_ref()
                         .map(|d| d.error.code.clone())
@@ -314,7 +316,7 @@ impl Client {
                         409 => return Err(ClientError::SchemaAhead),
                         410 => return Err(ClientError::CursorExpired),
                         413 => return Err(ClientError::TooLarge),
-                        426 => return Err(ClientError::UpgradeRequired),
+                        426 => return Err(ClientError::UpgradeRequired(min_schema)),
                         400 => return Err(ClientError::BadRequest(format!("{code} {message}"))),
                         429 | 500..=599 => {
                             let retry_after = resp
@@ -463,7 +465,7 @@ mod tests {
             (409, ClientError::SchemaAhead),
             (410, ClientError::CursorExpired),
             (413, ClientError::TooLarge),
-            (426, ClientError::UpgradeRequired),
+            (426, ClientError::UpgradeRequired(None)),
         ] {
             let (c, t, _) = client(vec![resp(
                 status,

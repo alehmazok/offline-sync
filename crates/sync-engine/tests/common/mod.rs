@@ -278,6 +278,8 @@ pub struct Device {
     pub engine: Option<Engine>,
     pub manifest: Manifest,
     pub migrations: Vec<Migration>,
+    /// Replaces the static token when set.
+    pub tokens: Option<Arc<dyn TokenProvider>>,
 }
 
 static COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -309,6 +311,7 @@ impl Device {
             engine: None,
             manifest: manifest(),
             migrations: migrations(),
+            tokens: None,
         };
         d.open();
         d
@@ -319,7 +322,10 @@ impl Device {
             &self.path,
             self.manifest.clone(),
             "http://in-process/sync/v1",
-            Arc::new(StaticToken(self.token.clone())),
+            match &self.tokens {
+                Some(t) => t.clone(),
+                None => Arc::new(StaticToken(self.token.clone())),
+            },
         );
         cfg.migrations = self.migrations.clone();
         cfg.default_scope = Some(self.default_scope.clone());
@@ -435,4 +441,24 @@ impl EngineListener for Recorder {
     fn on_status(&self, s: &SyncStatus) {
         self.statuses.lock().unwrap().push(s.clone());
     }
+}
+
+/// Make a local write the moment the first pull request goes out, so the
+/// pulled page meets an unsent local edit.
+pub fn write_during_pull(d: &Device, sql: &'static str, params: Vec<SqlValue>) {
+    let engine = d.e().clone();
+    let done = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    *d.transport.intercept.lock().unwrap() = Some(Box::new(move |req| {
+        if req.method == Method::Get
+            && req.path.ends_with("/changes")
+            && !done.swap(true, Ordering::SeqCst)
+        {
+            engine.execute(sql, &params).unwrap();
+        }
+        None
+    }));
+}
+
+pub fn events(rec: &Recorder) -> Vec<SyncEvent> {
+    rec.events.lock().unwrap().clone()
 }

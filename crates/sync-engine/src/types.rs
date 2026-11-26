@@ -48,8 +48,8 @@ impl EngineError {
             } => EngineError::Server(format!("{status} {code} {message}")),
             ClientError::Unauthorized | ClientError::Token(_) => EngineError::Unauthorized,
             ClientError::SchemaAhead => EngineError::SchemaAhead,
-            ClientError::UpgradeRequired => EngineError::UpgradeRequired {
-                min_schema_version: 0,
+            ClientError::UpgradeRequired(min) => EngineError::UpgradeRequired {
+                min_schema_version: min.unwrap_or(0),
             },
             other => EngineError::Protocol(other.to_string()),
         }
