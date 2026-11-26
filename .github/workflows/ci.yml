@@ -128,6 +128,7 @@ jobs:
         working-directory: bindings/flutter/example
         run: flutter analyze 2>&1 | tee "$LOGS/analyze-example.log"
       - name: Build APK
+        timeout-minutes: 25
         working-directory: bindings/flutter/example
         run: flutter build apk --debug 2>&1 | tee "$LOGS/build-apk.log"
 
@@ -143,6 +144,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Integration test on an emulator
+        timeout-minutes: 25
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -152,10 +154,10 @@ jobs:
           working-directory: bindings/flutter/example
           # The emulator reaches the host's 127.0.0.1 as 10.0.2.2 (the
           # example's default URL on Android).
-          script: bash -o pipefail -c 'flutter test integration_test -d emulator-5554 2>&1 | tee "$LOGS/zz-integration-android.log"'
+          script: bash -o pipefail -c 'flutter test integration_test -d emulator-5554 --reporter expanded 2>&1 | tee "$LOGS/zz-integration-android.log"'
 
       - name: Report failure
-        if: failure()
+        if: failure() || cancelled()
         run: .github/scripts/report-failure.sh "$LOGS"
 
   # Builds the example for the iOS simulator and runs the end-to-end test.
@@ -208,6 +210,7 @@ jobs:
           ./tool/create_platforms.sh 2>&1 | tee "$LOGS/create-platforms.log"
           flutter pub get 2>&1 | tee -a "$LOGS/create-platforms.log"
       - name: Build for the simulator
+        timeout-minutes: 25
         working-directory: bindings/flutter/example
         run: flutter build ios --simulator --debug 2>&1 | tee "$LOGS/build-ios.log"
 
@@ -227,9 +230,10 @@ jobs:
           xcrun simctl boot "$udid"
           echo "SIM_UDID=$udid" >> "$GITHUB_ENV"
       - name: Integration test on the simulator
+        timeout-minutes: 25
         working-directory: bindings/flutter/example
-        run: flutter test integration_test -d "$SIM_UDID" 2>&1 | tee "$LOGS/zz-integration-ios.log"
+        run: flutter test integration_test -d "$SIM_UDID" --reporter expanded 2>&1 | tee "$LOGS/zz-integration-ios.log"
 
       - name: Report failure
-        if: failure()
+        if: failure() || cancelled()
         run: .github/scripts/report-failure.sh "$LOGS"

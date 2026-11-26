@@ -15,6 +15,9 @@ import 'package:integration_test/integration_test.dart';
 import 'package:offline_sync/offline_sync.dart';
 import 'package:offline_sync_example/sync_setup.dart';
 
+// Generous, but short enough that a hang fails the test instead of the job.
+const _limit = Timeout(Duration(minutes: 2));
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -54,7 +57,7 @@ void main() {
     await b.syncNow();
     await seen.future.timeout(const Duration(seconds: 10));
     await sub.cancel();
-  });
+  }, timeout: _limit);
 
   testWidgets('offline edits to different fields merge', (_) async {
     final a = await device();
@@ -84,7 +87,7 @@ void main() {
     await b.syncNow();
     await a.syncNow();
     expect(await noteById(a, id), isNull);
-  });
+  }, timeout: _limit);
 
   testWidgets('status and events stream from Rust', (_) async {
     final e = await device();
@@ -99,7 +102,7 @@ void main() {
     expect(events, contains('scope_added'));
     await s1.cancel();
     await s2.cancel();
-  });
+  }, timeout: _limit);
 
   testWidgets('the token callback is called and a signed-out user is not synced', (_) async {
     var signedIn = true;
@@ -122,7 +125,7 @@ void main() {
     signedIn = true;
     await e.syncNow();
     expect((await e.status()).pendingChanges, 0);
-  });
+  }, timeout: _limit);
 
   testWidgets('a cancelled watch does not break later writes', (_) async {
     final e = await device();
@@ -137,7 +140,7 @@ void main() {
     await addNote(e, 'after cancel 1 $run');
     await addNote(e, 'after cancel 2 $run');
     expect((await notes(e)).length, greaterThanOrEqualTo(2));
-  });
+  }, timeout: _limit);
 
   testWidgets('SQL errors arrive as FfiError', (_) async {
     final e = await device();
@@ -145,5 +148,5 @@ void main() {
       e.execute(sql: 'INSERT INTO no_such_table VALUES (1)', params: []),
       throwsA(isA<FfiError>()),
     );
-  });
+  }, timeout: _limit);
 }
