@@ -10,13 +10,17 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:offline_sync/offline_sync.dart';
 import 'package:offline_sync_example/sync_setup.dart';
 
 // Generous, but short enough that a hang fails the test instead of the job.
-const _limit = Timeout(Duration(minutes: 2));
+const _limit = Timeout(Duration(seconds: 60));
+
+/// Progress marker in the test log, to locate a hang.
+void step(String s) => debugPrint('[step ${DateTime.now().toIso8601String().substring(11, 23)}] $s');
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -40,23 +44,31 @@ void main() {
     final b = await device();
 
     final title = 'note $run';
+    step('t1 add');
     await addNote(a, title);
     expect((await a.status()).pendingChanges, 1);
 
+    step('t1 a.sync');
     final report = await a.syncNow();
     expect(report.pushed, 1);
     expect((await a.status()).pendingChanges, 0);
 
     // B's watch emits the current result, then again after the download.
     final seen = Completer<void>();
+    step('t1 b.watch');
     final sub = b.watch(sql: notesQuery, params: []).listen((rows) {
+      step('t1 watch rows ${rows.rows.length}');
       if (Note.fromRows(rows).any((x) => x.title == title) && !seen.isCompleted) {
         seen.complete();
       }
     });
+    step('t1 b.sync');
     await b.syncNow();
+    step('t1 wait seen');
     await seen.future.timeout(const Duration(seconds: 10));
+    step('t1 cancel');
     await sub.cancel();
+    step('t1 done');
   }, timeout: _limit);
 
   testWidgets('offline edits to different fields merge', (_) async {
@@ -89,19 +101,40 @@ void main() {
     expect(await noteById(a, id), isNull);
   }, timeout: _limit);
 
-  testWidgets('status and events stream from Rust', (_) async {
+  testWidgets('status streams from Rust during a sync', (_) async {
     final e = await device();
     final phases = <String>[];
-    final events = <String>[];
-    final s1 = e.statusStream().listen((s) => phases.add(s.phase));
-    final s2 = e.eventStream().listen((ev) => events.add(ev.kind));
+    step('t3a listen');
+    final sub = e.statusStream().listen((s) {
+      step('t3a status ${s.phase}');
+      phases.add(s.phase);
+    });
+    step('t3a sync');
     await e.syncNow();
-    // Let the last callbacks arrive.
+    step('t3a delay');
     await Future<void>.delayed(const Duration(milliseconds: 200));
     expect(phases, contains('idle'));
+    step('t3a cancel');
+    await sub.cancel();
+    step('t3a done');
+  }, timeout: _limit);
+
+  testWidgets('events stream from Rust during a sync', (_) async {
+    final e = await device();
+    final events = <String>[];
+    step('t3b listen');
+    final sub = e.eventStream().listen((ev) {
+      step('t3b event ${ev.kind}');
+      events.add(ev.kind);
+    });
+    step('t3b sync');
+    await e.syncNow();
+    step('t3b delay');
+    await Future<void>.delayed(const Duration(milliseconds: 200));
     expect(events, contains('scope_added'));
-    await s1.cancel();
-    await s2.cancel();
+    step('t3b cancel');
+    await sub.cancel();
+    step('t3b done');
   }, timeout: _limit);
 
   testWidgets('the token callback is called and a signed-out user is not synced', (_) async {

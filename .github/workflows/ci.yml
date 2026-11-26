@@ -235,7 +235,16 @@ jobs:
       - name: Integration test on the simulator
         timeout-minutes: 25
         working-directory: bindings/flutter/example
-        run: flutter test integration_test -d "$SIM_UDID" --reporter expanded 2>&1 | tee "$LOGS/zz-integration-ios.log"
+        # Xcode on CI runners sometimes fails to report build settings or
+        # to start the app; one retry tells that apart from a real failure.
+        run: |
+          for attempt in 1 2; do
+            echo "attempt $attempt" | tee -a "$LOGS/zz-integration-ios.log"
+            if flutter test integration_test -d "$SIM_UDID" --reporter expanded 2>&1 | tee -a "$LOGS/zz-integration-ios.log"; then
+              exit 0
+            fi
+          done
+          exit 1
       - name: Simulator log
         if: failure()
         run: |
