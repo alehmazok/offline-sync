@@ -1,0 +1,269 @@
+openapi: 3.0.3
+info:
+  title: offline-sync protocol
+  version: "1.0.0"
+  description: >
+    Machine-readable form of docs/02-protocol.md. If the two disagree, the
+    Markdown document is authoritative.
+servers:
+  - url: https://example.com/sync/v1
+security:
+  - bearer: []
+paths:
+  /session:
+    get:
+      summary: Versions, limits and the scopes this user may sync
+      operationId: getSession
+      parameters:
+        - $ref: "#/components/parameters/Schema"
+        - $ref: "#/components/parameters/Device"
+      responses:
+        "200":
+          description: Session information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        default:
+          $ref: "#/components/responses/Error"
+  /scopes/{scope}/changes:
+    parameters:
+      - $ref: "#/components/parameters/Scope"
+      - $ref: "#/components/parameters/Schema"
+      - $ref: "#/components/parameters/Device"
+    get:
+      summary: Pull records changed after a cursor
+      operationId: pullChanges
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          description: Cursor from the previous response. Omit to start from the beginning.
+          schema:
+            type: string
+            maxLength: 255
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 500
+      responses:
+        "200":
+          description: A page of records in version order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PullResponse"
+        default:
+          $ref: "#/components/responses/Error"
+    post:
+      summary: Push a batch of local changes
+      operationId: pushChanges
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushRequest"
+      responses:
+        "200":
+          description: One result per change, in request order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PushResponse"
+        default:
+          $ref: "#/components/responses/Error"
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+  parameters:
+    Scope:
+      name: scope
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: "^[A-Za-z0-9_.:-]{1,128}$"
+    Schema:
+      name: X-Sync-Schema
+      in: header
+      required: true
+      description: The client's schema version
+      schema:
+        type: integer
+        minimum: 1
+    Device:
+      name: X-Sync-Device
+      in: header
+      required: true
+      description: UUID generated once per app installation
+      schema:
+        type: string
+        format: uuid
+  responses:
+    Error:
+      description: The request failed as a whole
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+  schemas:
+    Session:
+      type: object
+      required: [protocol, schema_version, min_schema_version, limits, scopes]
+      properties:
+        protocol:
+          type: integer
+          enum: [1]
+        schema_version:
+          type: integer
+        min_schema_version:
+          type: integer
+        server_time:
+          type: string
+          format: date-time
+        limits:
+          type: object
+          required: [max_push_changes, max_push_bytes, max_pull_limit]
+          properties:
+            max_push_changes:
+              type: integer
+            max_push_bytes:
+              type: integer
+            max_pull_limit:
+              type: integer
+        scopes:
+          type: array
+          items:
+            type: object
+            required: [id, access]
+            properties:
+              id:
+                type: string
+              access:
+                type: string
+                enum: [read, read_write]
+    Record:
+      type: object
+      required: [table, id, version, deleted]
+      properties:
+        table:
+          type: string
+          pattern: "^[a-z][a-z0-9_]{0,62}$"
+        id:
+          type: string
+          maxLength: 64
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+        deleted:
+          type: boolean
+        data:
+          type: object
+          additionalProperties: true
+          description: All synced fields. Absent when deleted is true.
+    Change:
+      type: object
+      required: [change_id, table, id, op]
+      properties:
+        change_id:
+          type: string
+          format: uuid
+        table:
+          type: string
+        id:
+          type: string
+          maxLength: 64
+        op:
+          type: string
+          enum: [upsert, delete]
+        base_version:
+          type: integer
+          format: int64
+          nullable: true
+          description: Version the change was made on top of; null if the record was believed not to exist.
+        fields:
+          type: object
+          additionalProperties: true
+          description: For upsert, only the fields this change sets.
+    PushRequest:
+      type: object
+      required: [changes]
+      properties:
+        changes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Change"
+    ChangeResult:
+      type: object
+      required: [change_id, status]
+      properties:
+        change_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [applied, conflict, rejected]
+        version:
+          type: integer
+          format: int64
+          nullable: true
+          description: Present when status is applied.
+        reason:
+          type: string
+          enum: [stale, deleted]
+          description: Present when status is conflict.
+        code:
+          type: string
+          description: Present when status is rejected, for example validation_failed.
+        message:
+          type: string
+        record:
+          allOf:
+            - $ref: "#/components/schemas/Record"
+          nullable: true
+          description: Current server state, present for conflict and rejected; null if the server has no such record.
+    PushResponse:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChangeResult"
+    PullResponse:
+      type: object
+      required: [records, cursor, has_more]
+      properties:
+        records:
+          type: array
+          items:
+            $ref: "#/components/schemas/Record"
+        cursor:
+          type: string
+          maxLength: 255
+        has_more:
+          type: boolean
+    ErrorBody:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code]
+          properties:
+            code:
+              type: string
+              description: >
+                bad_request, unauthorized, scope_forbidden, scope_not_found,
+                schema_ahead, cursor_expired, too_large, upgrade_required,
+                rate_limited
+            message:
+              type: string

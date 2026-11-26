@@ -1,0 +1,398 @@
+# 2. Sync protocol, version 1
+
+This document is the contract between the client engine and any server. It
+uses MUST, SHOULD and MAY in their usual specification sense. A server is
+conformant when it passes the tests in
+[05-conformance-tests.md](05-conformance-tests.md).
+
+The protocol has three endpoints:
+
+| Purpose | Method and path |
+| --- | --- |
+| Session: versions, limits, scopes | `GET /sync/v1/session` |
+| Push local changes | `POST /sync/v1/scopes/{scope}/changes` |
+| Pull remote changes | `GET /sync/v1/scopes/{scope}/changes` |
+
+## 1. Conventions
+
+- Transport is HTTPS. Bodies are JSON in UTF-8. Both sides SHOULD support
+  gzip for request and response bodies.
+- The base path `/sync/v1` MAY be mounted under any prefix. The client is
+  configured with the full base URL.
+- Every request carries:
+
+| Header | Value |
+| --- | --- |
+| `Authorization` | `Bearer <token>`. How the token is obtained is outside this protocol. |
+| `X-Sync-Schema` | The client's schema version, an integer |
+| `X-Sync-Device` | A UUID generated once per app installation |
+
+- Field names in protocol messages are `snake_case`.
+- Unknown fields in any message MUST be ignored by the receiver. This is
+  what allows the protocol to grow without breaking old clients.
+
+## 2. Data model
+
+### 2.1 Records
+
+A record is identified by `table` and `id`.
+
+- `table` is a name from the project's schema: `[a-z][a-z0-9_]{0,62}`.
+- `id` is a string chosen by whoever creates the record, up to 64
+  characters. Clients MUST generate UUIDs (version 7 recommended, since they
+  sort by creation time). Servers creating records MAY use any unique
+  string.
+
+On the wire a record looks like this:
+
+```json
+{
+  "table": "visits",
+  "id": "018f3c2e-7a10-7c1e-9b4a-2f6d1c0e5a11",
+  "version": 58,
+  "deleted": false,
+  "data": {
+    "store_id": "018f3c2e-1111-7000-8000-000000000001",
+    "started_at": "2026-11-26T08:15:00Z",
+    "note": "Shelf restocked",
+    "photo_count": 3
+  }
+}
+```
+
+A deleted record (a tombstone) has `"deleted": true` and no `data`.
+
+`version` is an integer between 1 and 2^53 - 1. It is the scope's change
+number at the record's last modification.
+
+### 2.2 Values
+
+`data` is a flat JSON object of field name to value.
+
+| Type | JSON form | Notes |
+| --- | --- | --- |
+| Text | string | |
+| Integer | number | Integers outside +/- 2^53 MUST be sent as strings |
+| Decimal | string | Money and other exact decimals are strings, never floats |
+| Float | number | |
+| Boolean | `true` / `false` | |
+| Null | `null` | A field set to null is different from a field that is absent |
+| Timestamp | string | RFC 3339 in UTC, for example `2026-11-26T08:15:00Z` |
+| Binary | string | Base64. Discouraged; keep files out of sync |
+| Structured | object or array | Treated as one value: it is replaced as a whole, never merged |
+
+The engine treats values as opaque. Types matter only to the app and to
+server validation.
+
+## 3. Scopes and session
+
+Every record belongs to exactly one scope. A scope is the unit of access
+control, of ordering and of sync progress.
+
+- A scope ID is a string matching `[A-Za-z0-9_.:-]{1,128}`, for example
+  `user:1042` or `team:17`. Its meaning is up to the project.
+- Access is all or nothing per scope: `read` or `read_write`.
+- Within a scope, versions increase with every change.
+- A record ID is unique per table across all scopes, and a record stays in
+  its scope for life. A pushed change naming an ID that exists in a
+  different scope is `rejected` with code `forbidden`.
+
+### 3.1 `GET /sync/v1/session`
+
+The client calls this at the start of every sync cycle.
+
+```json
+{
+  "protocol": 1,
+  "schema_version": 7,
+  "min_schema_version": 5,
+  "server_time": "2026-11-26T03:30:00Z",
+  "limits": {
+    "max_push_changes": 500,
+    "max_push_bytes": 1048576,
+    "max_pull_limit": 1000
+  },
+  "scopes": [
+    { "id": "user:1042", "access": "read_write" },
+    { "id": "team:17", "access": "read" }
+  ]
+}
+```
+
+Rules:
+
+- `scopes` is the complete list of scopes this user may sync right now.
+- When a scope the client holds is no longer listed, the client removes that
+  scope's records from the device. Unsent changes for it are discarded and
+  reported to the app.
+- When a new scope appears, the client starts pulling it from the beginning.
+
+## 4. Push
+
+### 4.1 Request
+
+`POST /sync/v1/scopes/{scope}/changes`
+
+```json
+{
+  "changes": [
+    {
+      "change_id": "018f3c30-0001-7000-8000-00000000a001",
+      "table": "visits",
+      "id": "018f3c2e-7a10-7c1e-9b4a-2f6d1c0e5a11",
+      "op": "upsert",
+      "base_version": 41,
+      "fields": { "note": "Shelf restocked", "photo_count": 3 }
+    },
+    {
+      "change_id": "018f3c30-0002-7000-8000-00000000a002",
+      "table": "visit_photos",
+      "id": "018f3c2e-9999-7000-8000-00000000b001",
+      "op": "delete",
+      "base_version": 57
+    }
+  ]
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `change_id` | UUID unique to this change, generated by the client. The key for duplicate detection. |
+| `op` | `upsert` or `delete` |
+| `fields` | For `upsert`: only the fields this change sets. Absent fields are left untouched. For a new record, absent fields take the server's defaults. |
+| `base_version` | The record version this change was made on top of, or `null` if the client believed the record did not exist. Used for conflict detection (section 6). |
+
+### 4.2 Processing rules
+
+The server MUST:
+
+1. Process the changes in array order.
+2. Apply each change atomically: the data write, the new version number and
+   the memory of `change_id` commit together or not at all.
+3. Decide each change independently. One failed change does not stop the
+   ones after it.
+4. Recognise a `change_id` it has already processed and return the same
+   `status` as the first time, without applying the change again. Change IDs
+   MUST be remembered for at least 30 days.
+5. Give every applied change a new version, greater than every version
+   already visible in the scope.
+
+A client MAY resend a whole batch after a timeout or crash. Rule 4 makes
+this safe.
+
+### 4.3 Response
+
+HTTP 200 with one result per change, in the same order.
+
+```json
+{
+  "results": [
+    {
+      "change_id": "018f3c30-0001-7000-8000-00000000a001",
+      "status": "applied",
+      "version": 58
+    },
+    {
+      "change_id": "018f3c30-0002-7000-8000-00000000a002",
+      "status": "conflict",
+      "reason": "stale",
+      "record": { "table": "visit_photos", "id": "018f3c2e-9999-7000-8000-00000000b001", "version": 60, "deleted": false, "data": { "caption": "Front shelf" } }
+    }
+  ]
+}
+```
+
+| `status` | Meaning | Extra fields | What the client does |
+| --- | --- | --- | --- |
+| `applied` | The change is now part of the server state | `version` | Removes the change from the outbox |
+| `conflict` | The change lost to newer server state (section 6) | `reason`: `stale` or `deleted`; `record` | Drops the change, takes `record` as the truth, tells the app |
+| `rejected` | The server refuses this change permanently | `code`, `message`, `record` | Drops the change, takes `record` as the truth, tells the app |
+
+`record` is the server's current state of that record in the form of
+section 2.1, or `null` if the server has no such record. With it the client
+can repair its local copy immediately.
+
+`rejected` is final. The client MUST NOT resend a rejected change. Standard
+values of `code`:
+
+| `code` | Meaning |
+| --- | --- |
+| `validation_failed` | The data breaks a rule of the project |
+| `forbidden` | This user may not make this change |
+| `read_only` | The table does not accept changes from clients |
+| `unknown_table` | The table is not part of the server's schema |
+| `unknown_field` | A field is not part of the server's schema |
+
+Projects MAY define further codes. Clients treat unknown codes like
+`validation_failed`.
+
+## 5. Pull
+
+### 5.1 Request
+
+`GET /sync/v1/scopes/{scope}/changes?cursor=<cursor>&limit=<n>`
+
+- `cursor` is the value from the previous response for this scope. Omit it
+  to start from the beginning.
+- `limit` is the maximum number of records to return, default 500.
+
+### 5.2 Response
+
+```json
+{
+  "records": [
+    { "table": "stores", "id": "018f...01", "version": 55, "deleted": false, "data": { "name": "Market 12" } },
+    { "table": "visits", "id": "018f...11", "version": 58, "deleted": false, "data": { "note": "Shelf restocked", "photo_count": 3 } },
+    { "table": "visit_photos", "id": "018f...b2", "version": 59, "deleted": true }
+  ],
+  "cursor": "NTk",
+  "has_more": false
+}
+```
+
+Rules for the server:
+
+1. Records are ordered by `version`, ascending.
+2. `cursor` is always present, even when `records` is empty. It is opaque to
+   the client: any string up to 255 characters.
+3. `has_more` is `true` when another request with the new cursor would
+   return more records right now.
+4. **Completeness.** After a client has applied every page up to a cursor,
+   its copy of the scope equals the server's state at some moment at or
+   after that cursor was issued. No change may be skipped. This is the most
+   important rule in the protocol; see the server guide for how it is
+   usually broken.
+5. A record changed several times since the cursor MAY be returned once,
+   with its latest state. Intermediate states need not be delivered.
+6. A record MAY be delivered in a newer state than the cursor position
+   implies. It will then appear again in a later page, which is harmless.
+7. Whole records are returned, with every synced field, never partial ones.
+8. A pull from the beginning returns every live record of the scope.
+   Tombstones MAY be omitted in that case.
+
+Rules for the client:
+
+1. Apply a page and store its cursor in one local transaction.
+2. Applying the same page twice MUST give the same result.
+3. Ignore records of unknown tables and unknown fields in `data`.
+4. A device will receive its own pushed changes back in a later pull. This
+   is expected.
+
+### 5.3 Expired cursors
+
+A server MAY discard tombstones older than a retention period, which SHOULD
+be at least 30 days. A cursor older than the oldest retained tombstone can
+no longer be answered correctly.
+
+In that case the server responds `410` with error code `cursor_expired`.
+The client then pulls the scope again from the beginning and, once
+`has_more` is `false`, deletes every local record of that scope that was
+not returned and has no unsent changes.
+
+## 6. Conflict rules
+
+A conflict exists when a change arrives with a `base_version` lower than the
+record's current version: someone else changed the record after this client
+last saw it.
+
+Each table has one policy, configured on the server and mirrored in the
+client manifest:
+
+| Policy | On an upsert with a stale `base_version` | On a delete with a stale `base_version` |
+| --- | --- | --- |
+| `field_merge` (default) | Applied. The fields in the change overwrite the server's values; all other fields keep the server's values. | Applied. The record is deleted. |
+| `server_wins` | `conflict` with reason `stale`. Nothing is applied. | `conflict` with reason `stale`. Nothing is applied. |
+
+Rules that hold under both policies:
+
+1. **Order of arrival decides.** When two devices change the same field, the
+   change the server processes last wins. Client timestamps play no part.
+2. **Deletes win.** An upsert to a record that is deleted on the server gets
+   `conflict` with reason `deleted`. The record stays deleted.
+3. **Deletes are repeatable.** A delete of a record that is already deleted
+   or never existed is `applied`. `version` is the tombstone's version, or
+   `null` if the server never knew the record.
+4. **New records.** An upsert for an ID the server does not know creates the
+   record, whatever its `base_version`.
+5. `base_version` equal to the current version is never a conflict.
+
+Under `field_merge` the stale check changes nothing, so a server MAY skip
+comparing versions for those tables.
+
+## 7. Errors
+
+A request that fails as a whole returns a non-2xx status and this body:
+
+```json
+{ "error": { "code": "upgrade_required", "message": "App version too old" } }
+```
+
+| Status | `code` | Meaning | Client behaviour |
+| --- | --- | --- | --- |
+| 400 | `bad_request` | Malformed request | Bug. Stop syncing and report |
+| 401 | `unauthorized` | Missing or expired token | Ask the host for a fresh token, retry once |
+| 403 | `scope_forbidden` | No access to this scope, or read-only scope on push | Refresh the session and follow section 3.1 |
+| 404 | `scope_not_found` | The scope does not exist | Same as 403 |
+| 409 | `schema_ahead` | The client's schema is newer than the server's | Wait and retry later; the backend is mid-deploy |
+| 410 | `cursor_expired` | See section 5.3 | Pull the scope from the beginning |
+| 413 | `too_large` | The batch exceeds a limit | Halve the batch and retry |
+| 426 | `upgrade_required` | The client's schema is older than `min_schema_version` | Stop syncing, keep the outbox, tell the app to update |
+| 429 | `rate_limited` | Too many requests | Retry after the `Retry-After` header |
+| 5xx | any | Server trouble | Retry with exponential backoff |
+
+Network failures and timeouts are treated like 5xx.
+
+## 8. Versioning
+
+Two version numbers exist and they are independent.
+
+**Protocol version** is in the URL (`/sync/v1`). It changes only when the
+rules in this document change incompatibly.
+
+**Schema version** is an integer per project that increases whenever the
+set of synced tables or fields changes.
+
+- The client sends its schema version in `X-Sync-Schema`.
+- The server answers clients from `min_schema_version` up to
+  `schema_version`.
+- **Additive changes** (a new table, a new optional field) do not require
+  raising `min_schema_version`. Old clients ignore what they do not know,
+  and because a push carries only changed fields, an old client cannot wipe
+  a field it has never heard of.
+- **Breaking changes** (removing or renaming a field or table, changing a
+  type) require raising `min_schema_version`. Older clients then receive
+  `426` until the app is updated.
+
+## 9. Limits
+
+| Limit | Default | Where it is set |
+| --- | --- | --- |
+| Changes per push | 500 | `limits.max_push_changes` |
+| Push body size, uncompressed | 1 MiB | `limits.max_push_bytes` |
+| Records per pull page | 500 by default, 1000 at most | `limit` parameter, `limits.max_pull_limit` |
+| Record ID length | 64 characters | Fixed |
+| Scope ID length | 128 characters | Fixed |
+| Cursor length | 255 characters | Fixed |
+
+## 10. Requirements checklist
+
+The conformance tests refer to these by number.
+
+| # | Requirement | Section |
+| --- | --- | --- |
+| R1 | Session lists exactly the scopes the user may sync | 3.1 |
+| R2 | Requests to a scope the user may not access are refused | 7 |
+| R3 | An applied change receives a version greater than all visible versions in the scope | 4.2 |
+| R4 | A repeated `change_id` is not applied twice and returns the same status | 4.2 |
+| R5 | Changes in a batch are processed in order and decided independently | 4.2 |
+| R6 | An upsert changes only the fields it names | 4.1 |
+| R7 | Pull returns records in version order with a cursor every time | 5.2 |
+| R8 | Pull never skips a change, including under concurrent writes | 5.2 |
+| R9 | Deletions are delivered as tombstones | 5.2 |
+| R10 | Paging with `limit` and `has_more` delivers everything exactly as one large pull would | 5.2 |
+| R11 | Conflict policy per table behaves as specified | 6 |
+| R12 | Deletes win over upserts; deletes are repeatable | 6 |
+| R13 | `conflict` and `rejected` results carry the current server record | 4.3 |
+| R14 | Schema version outside the supported range yields 426 or 409 | 7, 8 |
+| R15 | An expired cursor yields 410, and a pull from the beginning returns all live records | 5.3 |
+| R16 | Unknown fields in requests are ignored at the message level; unknown data fields are rejected per change | 1, 4.3 |
