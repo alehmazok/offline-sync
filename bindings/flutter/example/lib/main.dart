@@ -1,5 +1,8 @@
 import 'dart:async';
 
+// Flutter 3.47 moved Material to package:material_ui; the example keeps the
+// old import so it still builds on Flutter 3.35, the package's minimum.
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:offline_sync/offline_sync.dart';
 

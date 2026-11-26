@@ -228,11 +228,20 @@ jobs:
           print(next(x["udid"] for k, v in sorted(d.items(), reverse=True) if "iOS" in k for x in v if x["name"].startswith("iPhone")))
           ')
           xcrun simctl boot "$udid"
+          # `boot` returns before the simulator is usable; without this the
+          # test cannot reach the app's VM service.
+          xcrun simctl bootstatus "$udid" -b
           echo "SIM_UDID=$udid" >> "$GITHUB_ENV"
       - name: Integration test on the simulator
         timeout-minutes: 25
         working-directory: bindings/flutter/example
         run: flutter test integration_test -d "$SIM_UDID" --reporter expanded 2>&1 | tee "$LOGS/zz-integration-ios.log"
+      - name: Simulator log
+        if: failure()
+        run: |
+          xcrun simctl spawn "$SIM_UDID" log show --last 15m --style compact \
+            --predicate 'process == "Runner"' 2>&1 | tail -n 150 > "$LOGS/zzz-simulator.log" || true
+          ls ~/Library/Logs/DiagnosticReports 2>/dev/null | tail -n 5 >> "$LOGS/zzz-simulator.log" || true
 
       - name: Report failure
         if: failure() || cancelled()
