@@ -59,10 +59,17 @@ class _NotesPageState extends State<NotesPage> {
       _subs.add(e
           .watch(sql: notesQuery, params: [])
           .listen((rows) => setState(() => _notes = Note.fromRows(rows))));
-      _subs.add(e.statusStream().listen((s) => setState(() => _status = s)));
+      _subs.add(e.statusStream().listen((s) {
+        // CI looks for this line to confirm a sync worked on the device.
+        if (s.phase == 'idle' && s.lastSyncAt != null && s.lastError == null) {
+          debugPrint('offline_sync: synced, ${s.pendingChanges} unsent');
+        }
+        setState(() => _status = s);
+      }));
       _subs.add(e.eventStream().listen(_onEvent));
       final status = await e.status();
       final deviceId = await e.deviceId();
+      debugPrint('offline_sync: engine open, device $deviceId, server $_url');
       final scheduler = SyncScheduler(e, writeDebounce: const Duration(milliseconds: 500));
       setState(() {
         _engine = e;
