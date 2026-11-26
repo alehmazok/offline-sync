@@ -286,8 +286,11 @@ pub fn set_pulled(
         "INSERT INTO _sync_rows (tbl, row_id, scope, pulled_version, known_version, mark)
          VALUES (?1, ?2, ?3, ?4, ?4, ?5)
          ON CONFLICT (tbl, row_id) DO UPDATE SET
+             scope = excluded.scope,
              pulled_version = excluded.pulled_version,
-             known_version = MAX(known_version, excluded.pulled_version),
+             known_version = CASE WHEN scope = excluded.scope
+                                  THEN MAX(known_version, excluded.pulled_version)
+                                  ELSE excluded.pulled_version END,
              mark = excluded.mark",
         params![tbl, row_id, scope, version, mark],
     )?;

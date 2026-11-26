@@ -173,13 +173,38 @@ rows = sync_index where scope_id = scope and seq > after
        order by seq limit (limit + 1)
 has_more = more than `limit` rows came back; drop the extra row
 
-if after == 0: tombstones may be left out of the response
+if this is the first page of a download from the beginning:
+    tombstones may be left out of the response (never on later pages)
 
 load the project's rows for the non-deleted entries, grouped by table
 build one record per entry: version = entry.seq, data = all synced fields
 
-cursor = seq of the last index row read (or `after` if none)
+if has_more:
+    cursor = seq of the last index row read
+    (during a download from the beginning, remember that it is one:
+     see "Cursors" below)
+else:
+    cursor = max(seq of the last index row read, the scope's counter)
 ```
+
+### Cursors
+
+Two cursor rules are easy to get wrong; the reference server's cursor
+format shows one way to meet them.
+
+1. **A caught-up cursor is the counter, not the last row.** If the newest
+   changes were tombstones that have been pruned, the last index row is
+   older than `min_seq`. A cursor taken from it would be refused as expired
+   on the next pull, the device would download the scope again and end on
+   the same cursor: a loop. Read the counter in the same snapshot as the
+   rows and return it when `has_more` is false.
+2. **A download from the beginning must be able to finish.** Its
+   intermediate cursors can be older than `min_seq`, yet the device holds
+   nothing that could have missed a tombstone. Mark such cursors (the
+   reference server writes `d<seq>.<min_seq at start>`) and accept them as
+   long as `min_seq` has not changed since the download began.
+
+Conformance test C-OPT-01 checks both.
 
 Details that matter:
 
@@ -265,7 +290,17 @@ ID) so two moves cannot deadlock.
 - For pull, read inside a session with snapshot read concern, or apply the
   "skip the missing record" rule from section 3.5.
 
-## 3.10 Common mistakes
+## 3.10 The reference server
+
+`crates/sync-refserver` follows this guide in the simplest possible way:
+one SQLite connection behind a mutex, project data as JSON documents. It
+differs from the guide in one place: its `sync_index` is keyed by table and
+record ID only, so a record cannot appear in two scopes, and records cannot
+be moved between scopes (section 3.7) on the reference server. The client
+engine handles moves; a production server that supports them must key the
+index by scope as well, as in section 3.2.
+
+## 3.11 Common mistakes
 
 | Mistake | Symptom | Rule that prevents it |
 | --- | --- | --- |
@@ -276,8 +311,9 @@ ID) so two moves cannot deadlock.
 | Not storing results for duplicates | A retried batch applies twice, or returns a different status | Section 3.4 |
 | Physically deleting with no tombstone | Deleted records stay forever on other devices | Section 3.2 |
 | Returning partial records on pull | Devices lose fields | Protocol 5.2 |
+| Cursor taken from the last row after pruning | Endless re-downloads | Section 3.5, Cursors |
 
-## 3.11 Checklist for a new backend
+## 3.12 Checklist for a new backend
 
 - [ ] The three sync structures and their indexes exist
 - [ ] `next_seq` is implemented as in section 3.3 for this database

@@ -519,7 +519,20 @@ fn apply_pulled(
     report: &mut SyncReport,
 ) -> Result<bool> {
     let tbl = spec.name.as_str();
-    if let Some(rs) = state::row_state(conn, tbl, &r.id)? {
+    let rs = state::row_state(conn, tbl, &r.id)?;
+    // Versions are numbered per scope, so they compare only within one.
+    // A record seen in another scope has moved (protocol 3, server guide
+    // 3.7): a tombstone from its old scope is about its old life.
+    let rs = match rs {
+        Some(rs) if rs.scope != scope => {
+            if r.deleted {
+                return Ok(false);
+            }
+            None
+        }
+        other => other,
+    };
+    if let Some(rs) = rs {
         if r.version <= rs.pulled_version {
             // Already reflected; during a resync it still counts as seen.
             if rs.mark != gen {

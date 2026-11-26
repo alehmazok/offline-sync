@@ -273,11 +273,12 @@ pub fn write_record(
 ) -> Result<()> {
     let mut cols = vec!["id".to_string()];
     let mut vals = vec![SqlValue::Text(id.to_string())];
+    let mut updates = Vec::new();
     if let Some(sc) = spec.scope.column() {
         cols.push(sc.to_string());
         vals.push(SqlValue::Text(scope.to_string()));
+        updates.push(format!("\"{sc}\" = excluded.\"{sc}\""));
     }
-    let mut updates = Vec::new();
     for c in &spec.columns {
         if let Some(v) = data.get(c) {
             cols.push(c.clone());

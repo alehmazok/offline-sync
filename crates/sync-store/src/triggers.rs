@@ -60,9 +60,14 @@ pub fn table_triggers(t: &TableSpec) -> Vec<String> {
     let mut out = Vec::new();
 
     // Guards that hold even while capture is off.
+    // The id never changes. The scope changes only when the server moves a
+    // record, which the engine writes with capture off.
     let mut guard = "OLD.id IS NOT NEW.id".to_string();
     if let Some(sc) = t.scope.column() {
-        guard.push_str(&format!(" OR OLD.{c} IS NOT NEW.{c}", c = q(sc)));
+        guard.push_str(&format!(
+            " OR (sync_capture() AND OLD.{c} IS NOT NEW.{c})",
+            c = q(sc)
+        ));
         out.push(format!(
             "CREATE TRIGGER {} BEFORE INSERT ON {table} WHEN NEW.{c} IS NULL BEGIN \
              SELECT RAISE(ABORT, 'sync: scope column {sc} of {t} must be set'); END;",

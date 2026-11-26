@@ -139,10 +139,10 @@ Deliberately left out of version 1, with the extension point noted:
 | Flutter web | A WebAssembly build of the engine with a different storage layer |
 | Collaborative text editing | Out of scope for this design; needs CRDTs |
 
-## 1.7 Assumptions to confirm
+## 1.7 Assumptions
 
-These were assumed during design. Changing one of them affects the documents
-named next to it.
+These were assumed during design and **confirmed on 2026-11-26**. Changing
+one of them affects the documents named next to it.
 
 1. Data is record-oriented business data, not shared free-text documents.
    (Architecture D7)
@@ -152,3 +152,11 @@ named next to it.
    acceptable in most tables. (Protocol section 6)
 4. Datasets per scope are small enough to download in pages on first sync,
    on the order of tens of thousands of records. (Protocol section 5)
+
+## 1.8 Decisions taken with the project owner
+
+| Date | Decision |
+| --- | --- |
+| 2026-11-26 | The four assumptions in section 1.7 hold |
+| 2026-11-26 | Existing local data on users' devices does not need to survive the switch to the engine; it is downloaded again. Unsent work in the old app version must be uploaded before the update takes over |
+| 2026-11-26 | Which app moves to the engine first is decided later; phases 0 to 3 and 5 do not depend on it |

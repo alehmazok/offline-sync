@@ -451,3 +451,88 @@ fn first_sync_timing() {
     assert_eq!(r.pulled, n);
     println!("upload of {n} records: {upload:?}; first download: {download:?} (in-process server, this machine)");
 }
+
+// ------------------------------------------------------------------ moved records
+
+/// Serve hand-made pull pages for some scopes, so a record move can be
+/// staged in either order. Everything else goes to the real server.
+fn script_pulls(d: &Device, pages: Vec<(&'static str, serde_json::Value)>) {
+    let pages = Mutex::new(pages);
+    *d.transport.intercept.lock().unwrap() = Some(Box::new(move |req| {
+        if req.method != Method::Get || !req.path.ends_with("/changes") {
+            return None;
+        }
+        let mut pages = pages.lock().unwrap();
+        let i = pages
+            .iter()
+            .position(|(scope, _)| req.path == format!("/scopes/{scope}/changes"))?;
+        let (_, page) = pages.remove(i);
+        Some(HttpResponse::json(200, &page))
+    }));
+}
+
+fn page(records: serde_json::Value, cursor: &str) -> serde_json::Value {
+    json!({"records": records, "cursor": cursor, "has_more": false})
+}
+
+#[test]
+fn moved_record_follows_its_new_scope_in_either_order() {
+    for tombstone_first in [true, false] {
+        let s = server();
+        let a = Device::new("a", "alice", &s, 1);
+        let id = a.insert_item("team:1", "moving", 1);
+        a.sync();
+        let old_version = server_dump(&s, "team:1").len() as i64; // 1
+        let tomb =
+            json!([{"table": "items", "id": id, "version": old_version + 10, "deleted": true}]);
+        // In its new scope the record has a lower number than the tombstone:
+        // numbers are per scope.
+        let live = json!([{"table": "items", "id": id, "version": 2, "deleted": false,
+                           "data": {"title": "moved", "qty": 1, "note": null}}]);
+        if tombstone_first {
+            script_pulls(
+                &a,
+                vec![("team:1", page(tomb, "99")), ("team:2", page(live, "2"))],
+            );
+            a.sync();
+        } else {
+            script_pulls(&a, vec![("team:2", page(live, "2"))]);
+            a.sync();
+            script_pulls(&a, vec![("team:1", page(tomb, "99"))]);
+            a.sync();
+        }
+        let r = a
+            .e()
+            .query(
+                "SELECT scope_id, title FROM items WHERE id = ?1",
+                &[id.clone().into()],
+            )
+            .unwrap();
+        assert_eq!(
+            r.rows,
+            vec![vec![
+                SqlValue::Text("team:2".into()),
+                SqlValue::Text("moved".into())
+            ]],
+            "tombstone first: {tombstone_first}"
+        );
+        // Later local edits go to the new scope.
+        *a.transport.intercept.lock().unwrap() = None;
+        a.exec(
+            "UPDATE items SET qty = 5 WHERE id = ?1",
+            &[id.clone().into()],
+        );
+        let dump = a.e().debug_dump().unwrap();
+        assert_eq!(dump["unsent_changes"], 1);
+        let scope: String = match &a
+            .e()
+            .query("SELECT scope_id FROM items WHERE id = ?1", &[id.into()])
+            .unwrap()
+            .rows[0][0]
+        {
+            SqlValue::Text(s) => s.clone(),
+            _ => panic!(),
+        };
+        assert_eq!(scope, "team:2");
+    }
+}
