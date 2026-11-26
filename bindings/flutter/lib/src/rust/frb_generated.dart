@@ -7,1176 +7,1963 @@ import 'api/engine.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'frb_generated.dart';
-import 'frb_generated.io.dart' if (dart.library.js_interop) 'frb_generated.web.dart';
+import 'frb_generated.io.dart'
+    if (dart.library.js_interop) 'frb_generated.web.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+/// Main entrypoint of the Rust API
+class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
+  @internal
+  static final instance = RustLib._();
 
-                /// Main entrypoint of the Rust API
-                class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
-                  @internal
-                  static final instance = RustLib._();
+  RustLib._();
 
-                  RustLib._();
+  /// Initialize flutter_rust_bridge
+  static Future<void> init({
+    RustLibApi? api,
+    BaseHandler? handler,
+    ExternalLibrary? externalLibrary,
+    bool forceSameCodegenVersion = true,
+  }) async {
+    await instance.initImpl(
+      api: api,
+      handler: handler,
+      externalLibrary: externalLibrary,
+      forceSameCodegenVersion: forceSameCodegenVersion,
+    );
+  }
 
-                  /// Initialize flutter_rust_bridge
-                  static Future<void> init({
-                    RustLibApi? api,
-                    BaseHandler? handler,
-                    ExternalLibrary? externalLibrary,
-                    bool forceSameCodegenVersion = true,
-                  }) async {
-                    await instance.initImpl(
-                      api: api,
-                      handler: handler,
-                      externalLibrary: externalLibrary,
-                      forceSameCodegenVersion: forceSameCodegenVersion,
-                    );
-                  }
+  /// Initialize flutter_rust_bridge in mock mode.
+  /// No libraries for FFI are loaded.
+  static void initMock({required RustLibApi api}) {
+    instance.initMockImpl(api: api);
+  }
 
-                  /// Initialize flutter_rust_bridge in mock mode.
-                  /// No libraries for FFI are loaded.
-                  static void initMock({
-                    required RustLibApi api,
-                  }) {
-                    instance.initMockImpl(
-                      api: api,
-                    );
-                  }
+  /// Dispose flutter_rust_bridge
+  ///
+  /// The call to this function is optional, since flutter_rust_bridge (and everything else)
+  /// is automatically disposed when the app stops.
+  static void dispose() => instance.disposeImpl();
 
-                  /// Dispose flutter_rust_bridge
-                  ///
-                  /// The call to this function is optional, since flutter_rust_bridge (and everything else)
-                  /// is automatically disposed when the app stops.
-                  static void dispose() => instance.disposeImpl();
+  @override
+  ApiImplConstructor<RustLibApiImpl, RustLibWire> get apiImplConstructor =>
+      RustLibApiImpl.new;
 
-                  @override
-                  ApiImplConstructor<RustLibApiImpl, RustLibWire> get apiImplConstructor => RustLibApiImpl.new;
+  @override
+  WireConstructor<RustLibWire> get wireConstructor =>
+      RustLibWire.fromExternalLibrary;
 
-                  @override
-                  WireConstructor<RustLibWire> get wireConstructor => RustLibWire.fromExternalLibrary;
+  @override
+  Future<void> executeRustInitializers() async {}
 
-                  @override
-                  Future<void> executeRustInitializers() async {
-                    
-                    
-                  }
+  @override
+  ExternalLibraryLoaderConfig get defaultExternalLibraryLoaderConfig =>
+      kDefaultExternalLibraryLoaderConfig;
 
-                  @override
-                  ExternalLibraryLoaderConfig get defaultExternalLibraryLoaderConfig => kDefaultExternalLibraryLoaderConfig;
+  @override
+  String get codegenVersion => '2.13.0';
 
-                  @override
-                  String get codegenVersion => '2.13.0';
+  @override
+  int get rustContentHash => 238721493;
 
-                  @override
-                  int get rustContentHash => 238721493;
+  static const kDefaultExternalLibraryLoaderConfig =
+      ExternalLibraryLoaderConfig(
+        stem: 'offline_sync_flutter',
+        ioDirectory: 'rust/target/release/',
+        webPrefix: 'pkg/',
+        wasmBindgenName: 'wasm_bindgen',
+      );
+}
 
-                  static const kDefaultExternalLibraryLoaderConfig = ExternalLibraryLoaderConfig(
-                    stem: 'offline_sync_flutter',
-                    ioDirectory: 'rust/target/release/',
-                    webPrefix: 'pkg/',
-                    wasmBindgenName: 'wasm_bindgen',
-                  );
-                }
-                
+abstract class RustLibApi extends BaseApi {
+  Future<String> crateApiEngineSyncEngineDebugDump({required SyncEngine that});
 
-                abstract class RustLibApi extends BaseApi {
-                  Future<String> crateApiEngineSyncEngineDebugDump({required SyncEngine that });
+  Future<String> crateApiEngineSyncEngineDeviceId({required SyncEngine that});
 
-Future<String> crateApiEngineSyncEngineDeviceId({required SyncEngine that });
+  Future<PlatformInt64> crateApiEngineSyncEngineExecute({
+    required SyncEngine that,
+    required String sql,
+    required List<FfiValue> params,
+  });
 
-Future<PlatformInt64> crateApiEngineSyncEngineExecute({required SyncEngine that , required String sql , required List<FfiValue> params });
+  String crateApiEngineSyncEngineNewId({required SyncEngine that});
 
-String crateApiEngineSyncEngineNewId({required SyncEngine that });
+  Future<SyncEngine> crateApiEngineSyncEngineOpen({
+    required FfiConfig config,
+    required FutureOr<String> Function(bool) tokenProvider,
+  });
 
-Future<SyncEngine> crateApiEngineSyncEngineOpen({required FfiConfig config , required FutureOr<String> Function(bool) tokenProvider });
+  Future<FfiRows> crateApiEngineSyncEngineQuery({
+    required SyncEngine that,
+    required String sql,
+    required List<FfiValue> params,
+  });
 
-Future<FfiRows> crateApiEngineSyncEngineQuery({required SyncEngine that , required String sql , required List<FfiValue> params });
+  Future<void> crateApiEngineSyncEngineSignOut({
+    required SyncEngine that,
+    required bool discardPending,
+  });
 
-Future<void> crateApiEngineSyncEngineSignOut({required SyncEngine that , required bool discardPending });
+  Future<FfiStatus> crateApiEngineSyncEngineStatus({required SyncEngine that});
 
-Future<FfiStatus> crateApiEngineSyncEngineStatus({required SyncEngine that });
+  Stream<FfiEvent> crateApiEngineSyncEngineSubscribeEvents({
+    required SyncEngine that,
+    required PlatformInt64 subscription,
+  });
 
-Stream<FfiEvent> crateApiEngineSyncEngineSubscribeEvents({required SyncEngine that , required PlatformInt64 subscription });
+  Stream<FfiStatus> crateApiEngineSyncEngineSubscribeStatus({
+    required SyncEngine that,
+    required PlatformInt64 subscription,
+  });
 
-Stream<FfiStatus> crateApiEngineSyncEngineSubscribeStatus({required SyncEngine that , required PlatformInt64 subscription });
+  Stream<List<String>> crateApiEngineSyncEngineSubscribeTables({
+    required SyncEngine that,
+    required PlatformInt64 subscription,
+  });
 
-Stream<List<String>> crateApiEngineSyncEngineSubscribeTables({required SyncEngine that , required PlatformInt64 subscription });
+  Stream<FfiRows> crateApiEngineSyncEngineSubscribeWatch({
+    required SyncEngine that,
+    required PlatformInt64 subscription,
+    required String sql,
+    required List<FfiValue> params,
+  });
 
-Stream<FfiRows> crateApiEngineSyncEngineSubscribeWatch({required SyncEngine that , required PlatformInt64 subscription , required String sql , required List<FfiValue> params });
+  Future<FfiReport> crateApiEngineSyncEngineSyncNow({required SyncEngine that});
 
-Future<FfiReport> crateApiEngineSyncEngineSyncNow({required SyncEngine that });
+  Future<void> crateApiEngineSyncEngineUnsubscribe({
+    required SyncEngine that,
+    required PlatformInt64 subscription,
+  });
 
-Future<void> crateApiEngineSyncEngineUnsubscribe({required SyncEngine that , required PlatformInt64 subscription });
+  Future<void> crateApiEngineSyncEngineWriteBatch({
+    required SyncEngine that,
+    required List<FfiStatement> statements,
+  });
 
-Future<void> crateApiEngineSyncEngineWriteBatch({required SyncEngine that , required List<FfiStatement> statements });
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_SyncEngine;
 
-RustArcIncrementStrongCountFnType get rust_arc_increment_strong_count_SyncEngine;
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_SyncEngine;
 
-RustArcDecrementStrongCountFnType get rust_arc_decrement_strong_count_SyncEngine;
+  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_SyncEnginePtr;
+}
 
-CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_SyncEnginePtr;
+class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
+  RustLibApiImpl({
+    required super.handler,
+    required super.wire,
+    required super.generalizedFrbRustBinding,
+    required super.portManager,
+  });
 
-
-                }
-                
-
-                class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
-                  RustLibApiImpl({
-                    required super.handler,
-                    required super.wire,
-                    required super.generalizedFrbRustBinding,
-                    required super.portManager,
-                  });
-
-                  @override Future<String> crateApiEngineSyncEngineDebugDump({required SyncEngine that })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(that, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 1, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<String> crateApiEngineSyncEngineDebugDump({required SyncEngine that}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 1,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_String,
           decodeErrorData: sse_decode_ffi_error,
-        )
-        ,
-            constMeta: kCrateApiEngineSyncEngineDebugDumpConstMeta,
-            argValues: [that],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiEngineSyncEngineDebugDumpConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiEngineSyncEngineDebugDumpConstMeta =>
+      const TaskConstMeta(
+        debugName: "SyncEngine_debug_dump",
+        argNames: ["that"],
+      );
 
-        TaskConstMeta get kCrateApiEngineSyncEngineDebugDumpConstMeta => const TaskConstMeta(
-            debugName: "SyncEngine_debug_dump",
-            argNames: ["that"],
-        );
-        
-
-@override Future<String> crateApiEngineSyncEngineDeviceId({required SyncEngine that })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(that, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<String> crateApiEngineSyncEngineDeviceId({required SyncEngine that}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 2,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_String,
           decodeErrorData: sse_decode_ffi_error,
-        )
-        ,
-            constMeta: kCrateApiEngineSyncEngineDeviceIdConstMeta,
-            argValues: [that],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiEngineSyncEngineDeviceIdConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiEngineSyncEngineDeviceIdConstMeta =>
+      const TaskConstMeta(
+        debugName: "SyncEngine_device_id",
+        argNames: ["that"],
+      );
 
-        TaskConstMeta get kCrateApiEngineSyncEngineDeviceIdConstMeta => const TaskConstMeta(
-            debugName: "SyncEngine_device_id",
-            argNames: ["that"],
-        );
-        
-
-@override Future<PlatformInt64> crateApiEngineSyncEngineExecute({required SyncEngine that , required String sql , required List<FfiValue> params })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(that, serializer);
-sse_encode_String(sql, serializer);
-sse_encode_list_ffi_value(params, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<PlatformInt64> crateApiEngineSyncEngineExecute({
+    required SyncEngine that,
+    required String sql,
+    required List<FfiValue> params,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(
+            that,
+            serializer,
+          );
+          sse_encode_String(sql, serializer);
+          sse_encode_list_ffi_value(params, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 3,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_i_64,
           decodeErrorData: sse_decode_ffi_error,
-        )
-        ,
-            constMeta: kCrateApiEngineSyncEngineExecuteConstMeta,
-            argValues: [that, sql, params],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiEngineSyncEngineExecuteConstMeta,
+        argValues: [that, sql, params],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiEngineSyncEngineExecuteConstMeta =>
+      const TaskConstMeta(
+        debugName: "SyncEngine_execute",
+        argNames: ["that", "sql", "params"],
+      );
 
-        TaskConstMeta get kCrateApiEngineSyncEngineExecuteConstMeta => const TaskConstMeta(
-            debugName: "SyncEngine_execute",
-            argNames: ["that", "sql", "params"],
-        );
-        
-
-@override String crateApiEngineSyncEngineNewId({required SyncEngine that })  { return handler.executeSync(SyncTask(
-            callFfi: () {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(that, serializer);
-            return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  String crateApiEngineSyncEngineNewId({required SyncEngine that}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_String,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiEngineSyncEngineNewIdConstMeta,
-            argValues: [that],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiEngineSyncEngineNewIdConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiEngineSyncEngineNewIdConstMeta =>
+      const TaskConstMeta(debugName: "SyncEngine_new_id", argNames: ["that"]);
 
-        TaskConstMeta get kCrateApiEngineSyncEngineNewIdConstMeta => const TaskConstMeta(
-            debugName: "SyncEngine_new_id",
-            argNames: ["that"],
-        );
-        
-
-@override Future<SyncEngine> crateApiEngineSyncEngineOpen({required FfiConfig config , required FutureOr<String> Function(bool) tokenProvider })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_box_autoadd_ffi_config(config, serializer);
-sse_encode_DartFn_Inputs_bool_Output_String_AnyhowException(tokenProvider, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
-          decodeSuccessData: sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine,
+  @override
+  Future<SyncEngine> crateApiEngineSyncEngineOpen({
+    required FfiConfig config,
+    required FutureOr<String> Function(bool) tokenProvider,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_ffi_config(config, serializer);
+          sse_encode_DartFn_Inputs_bool_Output_String_AnyhowException(
+            tokenProvider,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 5,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine,
           decodeErrorData: sse_decode_ffi_error,
-        )
-        ,
-            constMeta: kCrateApiEngineSyncEngineOpenConstMeta,
-            argValues: [config, tokenProvider],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiEngineSyncEngineOpenConstMeta,
+        argValues: [config, tokenProvider],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiEngineSyncEngineOpenConstMeta =>
+      const TaskConstMeta(
+        debugName: "SyncEngine_open",
+        argNames: ["config", "tokenProvider"],
+      );
 
-        TaskConstMeta get kCrateApiEngineSyncEngineOpenConstMeta => const TaskConstMeta(
-            debugName: "SyncEngine_open",
-            argNames: ["config", "tokenProvider"],
-        );
-        
-
-@override Future<FfiRows> crateApiEngineSyncEngineQuery({required SyncEngine that , required String sql , required List<FfiValue> params })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(that, serializer);
-sse_encode_String(sql, serializer);
-sse_encode_list_ffi_value(params, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<FfiRows> crateApiEngineSyncEngineQuery({
+    required SyncEngine that,
+    required String sql,
+    required List<FfiValue> params,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(
+            that,
+            serializer,
+          );
+          sse_encode_String(sql, serializer);
+          sse_encode_list_ffi_value(params, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 6,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_ffi_rows,
           decodeErrorData: sse_decode_ffi_error,
-        )
-        ,
-            constMeta: kCrateApiEngineSyncEngineQueryConstMeta,
-            argValues: [that, sql, params],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiEngineSyncEngineQueryConstMeta,
+        argValues: [that, sql, params],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiEngineSyncEngineQueryConstMeta =>
+      const TaskConstMeta(
+        debugName: "SyncEngine_query",
+        argNames: ["that", "sql", "params"],
+      );
 
-        TaskConstMeta get kCrateApiEngineSyncEngineQueryConstMeta => const TaskConstMeta(
-            debugName: "SyncEngine_query",
-            argNames: ["that", "sql", "params"],
-        );
-        
-
-@override Future<void> crateApiEngineSyncEngineSignOut({required SyncEngine that , required bool discardPending })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(that, serializer);
-sse_encode_bool(discardPending, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateApiEngineSyncEngineSignOut({
+    required SyncEngine that,
+    required bool discardPending,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(
+            that,
+            serializer,
+          );
+          sse_encode_bool(discardPending, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 7,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_ffi_error,
-        )
-        ,
-            constMeta: kCrateApiEngineSyncEngineSignOutConstMeta,
-            argValues: [that, discardPending],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiEngineSyncEngineSignOutConstMeta,
+        argValues: [that, discardPending],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiEngineSyncEngineSignOutConstMeta =>
+      const TaskConstMeta(
+        debugName: "SyncEngine_sign_out",
+        argNames: ["that", "discardPending"],
+      );
 
-        TaskConstMeta get kCrateApiEngineSyncEngineSignOutConstMeta => const TaskConstMeta(
-            debugName: "SyncEngine_sign_out",
-            argNames: ["that", "discardPending"],
-        );
-        
-
-@override Future<FfiStatus> crateApiEngineSyncEngineStatus({required SyncEngine that })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(that, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<FfiStatus> crateApiEngineSyncEngineStatus({required SyncEngine that}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 8,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_ffi_status,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiEngineSyncEngineStatusConstMeta,
-            argValues: [that],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiEngineSyncEngineStatusConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiEngineSyncEngineStatusConstMeta =>
+      const TaskConstMeta(debugName: "SyncEngine_status", argNames: ["that"]);
 
-        TaskConstMeta get kCrateApiEngineSyncEngineStatusConstMeta => const TaskConstMeta(
-            debugName: "SyncEngine_status",
-            argNames: ["that"],
-        );
-        
+  @override
+  Stream<FfiEvent> crateApiEngineSyncEngineSubscribeEvents({
+    required SyncEngine that,
+    required PlatformInt64 subscription,
+  }) {
+    final sink = RustStreamSink<FfiEvent>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(
+              that,
+              serializer,
+            );
+            sse_encode_i_64(subscription, serializer);
+            sse_encode_StreamSink_ffi_event_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 9,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: null,
+          ),
+          constMeta: kCrateApiEngineSyncEngineSubscribeEventsConstMeta,
+          argValues: [that, subscription, sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
 
-@override Stream<FfiEvent> crateApiEngineSyncEngineSubscribeEvents({required SyncEngine that , required PlatformInt64 subscription })  { 
-            final sink = RustStreamSink<FfiEvent>();
-            unawaited(handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(that, serializer);
-sse_encode_i_64(subscription, serializer);
-sse_encode_StreamSink_ffi_event_Sse(sink, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiEngineSyncEngineSubscribeEventsConstMeta,
-            argValues: [that, subscription, sink],
-            apiImpl: this,
-        )));
-            return sink.stream;
-             }
+  TaskConstMeta get kCrateApiEngineSyncEngineSubscribeEventsConstMeta =>
+      const TaskConstMeta(
+        debugName: "SyncEngine_subscribe_events",
+        argNames: ["that", "subscription", "sink"],
+      );
 
+  @override
+  Stream<FfiStatus> crateApiEngineSyncEngineSubscribeStatus({
+    required SyncEngine that,
+    required PlatformInt64 subscription,
+  }) {
+    final sink = RustStreamSink<FfiStatus>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(
+              that,
+              serializer,
+            );
+            sse_encode_i_64(subscription, serializer);
+            sse_encode_StreamSink_ffi_status_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 10,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: null,
+          ),
+          constMeta: kCrateApiEngineSyncEngineSubscribeStatusConstMeta,
+          argValues: [that, subscription, sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
 
-        TaskConstMeta get kCrateApiEngineSyncEngineSubscribeEventsConstMeta => const TaskConstMeta(
-            debugName: "SyncEngine_subscribe_events",
-            argNames: ["that", "subscription", "sink"],
-        );
-        
+  TaskConstMeta get kCrateApiEngineSyncEngineSubscribeStatusConstMeta =>
+      const TaskConstMeta(
+        debugName: "SyncEngine_subscribe_status",
+        argNames: ["that", "subscription", "sink"],
+      );
 
-@override Stream<FfiStatus> crateApiEngineSyncEngineSubscribeStatus({required SyncEngine that , required PlatformInt64 subscription })  { 
-            final sink = RustStreamSink<FfiStatus>();
-            unawaited(handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(that, serializer);
-sse_encode_i_64(subscription, serializer);
-sse_encode_StreamSink_ffi_status_Sse(sink, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiEngineSyncEngineSubscribeStatusConstMeta,
-            argValues: [that, subscription, sink],
-            apiImpl: this,
-        )));
-            return sink.stream;
-             }
+  @override
+  Stream<List<String>> crateApiEngineSyncEngineSubscribeTables({
+    required SyncEngine that,
+    required PlatformInt64 subscription,
+  }) {
+    final sink = RustStreamSink<List<String>>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(
+              that,
+              serializer,
+            );
+            sse_encode_i_64(subscription, serializer);
+            sse_encode_StreamSink_list_String_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 11,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: null,
+          ),
+          constMeta: kCrateApiEngineSyncEngineSubscribeTablesConstMeta,
+          argValues: [that, subscription, sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
 
+  TaskConstMeta get kCrateApiEngineSyncEngineSubscribeTablesConstMeta =>
+      const TaskConstMeta(
+        debugName: "SyncEngine_subscribe_tables",
+        argNames: ["that", "subscription", "sink"],
+      );
 
-        TaskConstMeta get kCrateApiEngineSyncEngineSubscribeStatusConstMeta => const TaskConstMeta(
-            debugName: "SyncEngine_subscribe_status",
-            argNames: ["that", "subscription", "sink"],
-        );
-        
+  @override
+  Stream<FfiRows> crateApiEngineSyncEngineSubscribeWatch({
+    required SyncEngine that,
+    required PlatformInt64 subscription,
+    required String sql,
+    required List<FfiValue> params,
+  }) {
+    final sink = RustStreamSink<FfiRows>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(
+              that,
+              serializer,
+            );
+            sse_encode_i_64(subscription, serializer);
+            sse_encode_String(sql, serializer);
+            sse_encode_list_ffi_value(params, serializer);
+            sse_encode_StreamSink_ffi_rows_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 12,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_ffi_error,
+          ),
+          constMeta: kCrateApiEngineSyncEngineSubscribeWatchConstMeta,
+          argValues: [that, subscription, sql, params, sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
 
-@override Stream<List<String>> crateApiEngineSyncEngineSubscribeTables({required SyncEngine that , required PlatformInt64 subscription })  { 
-            final sink = RustStreamSink<List<String>>();
-            unawaited(handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(that, serializer);
-sse_encode_i_64(subscription, serializer);
-sse_encode_StreamSink_list_String_Sse(sink, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiEngineSyncEngineSubscribeTablesConstMeta,
-            argValues: [that, subscription, sink],
-            apiImpl: this,
-        )));
-            return sink.stream;
-             }
+  TaskConstMeta get kCrateApiEngineSyncEngineSubscribeWatchConstMeta =>
+      const TaskConstMeta(
+        debugName: "SyncEngine_subscribe_watch",
+        argNames: ["that", "subscription", "sql", "params", "sink"],
+      );
 
-
-        TaskConstMeta get kCrateApiEngineSyncEngineSubscribeTablesConstMeta => const TaskConstMeta(
-            debugName: "SyncEngine_subscribe_tables",
-            argNames: ["that", "subscription", "sink"],
-        );
-        
-
-@override Stream<FfiRows> crateApiEngineSyncEngineSubscribeWatch({required SyncEngine that , required PlatformInt64 subscription , required String sql , required List<FfiValue> params })  { 
-            final sink = RustStreamSink<FfiRows>();
-            unawaited(handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(that, serializer);
-sse_encode_i_64(subscription, serializer);
-sse_encode_String(sql, serializer);
-sse_encode_list_ffi_value(params, serializer);
-sse_encode_StreamSink_ffi_rows_Sse(sink, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: sse_decode_ffi_error,
-        )
-        ,
-            constMeta: kCrateApiEngineSyncEngineSubscribeWatchConstMeta,
-            argValues: [that, subscription, sql, params, sink],
-            apiImpl: this,
-        )));
-            return sink.stream;
-             }
-
-
-        TaskConstMeta get kCrateApiEngineSyncEngineSubscribeWatchConstMeta => const TaskConstMeta(
-            debugName: "SyncEngine_subscribe_watch",
-            argNames: ["that", "subscription", "sql", "params", "sink"],
-        );
-        
-
-@override Future<FfiReport> crateApiEngineSyncEngineSyncNow({required SyncEngine that })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(that, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<FfiReport> crateApiEngineSyncEngineSyncNow({
+    required SyncEngine that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 13,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_ffi_report,
           decodeErrorData: sse_decode_ffi_error,
-        )
-        ,
-            constMeta: kCrateApiEngineSyncEngineSyncNowConstMeta,
-            argValues: [that],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiEngineSyncEngineSyncNowConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiEngineSyncEngineSyncNowConstMeta =>
+      const TaskConstMeta(debugName: "SyncEngine_sync_now", argNames: ["that"]);
 
-        TaskConstMeta get kCrateApiEngineSyncEngineSyncNowConstMeta => const TaskConstMeta(
-            debugName: "SyncEngine_sync_now",
-            argNames: ["that"],
-        );
-        
-
-@override Future<void> crateApiEngineSyncEngineUnsubscribe({required SyncEngine that , required PlatformInt64 subscription })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(that, serializer);
-sse_encode_i_64(subscription, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateApiEngineSyncEngineUnsubscribe({
+    required SyncEngine that,
+    required PlatformInt64 subscription,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(
+            that,
+            serializer,
+          );
+          sse_encode_i_64(subscription, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 14,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiEngineSyncEngineUnsubscribeConstMeta,
-            argValues: [that, subscription],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiEngineSyncEngineUnsubscribeConstMeta,
+        argValues: [that, subscription],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiEngineSyncEngineUnsubscribeConstMeta =>
+      const TaskConstMeta(
+        debugName: "SyncEngine_unsubscribe",
+        argNames: ["that", "subscription"],
+      );
 
-        TaskConstMeta get kCrateApiEngineSyncEngineUnsubscribeConstMeta => const TaskConstMeta(
-            debugName: "SyncEngine_unsubscribe",
-            argNames: ["that", "subscription"],
-        );
-        
-
-@override Future<void> crateApiEngineSyncEngineWriteBatch({required SyncEngine that , required List<FfiStatement> statements })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(that, serializer);
-sse_encode_list_ffi_statement(statements, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateApiEngineSyncEngineWriteBatch({
+    required SyncEngine that,
+    required List<FfiStatement> statements,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(
+            that,
+            serializer,
+          );
+          sse_encode_list_ffi_statement(statements, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 15,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_ffi_error,
-        )
-        ,
-            constMeta: kCrateApiEngineSyncEngineWriteBatchConstMeta,
-            argValues: [that, statements],
-            apiImpl: this,
-        )); }
-
-
-        TaskConstMeta get kCrateApiEngineSyncEngineWriteBatchConstMeta => const TaskConstMeta(
-            debugName: "SyncEngine_write_batch",
-            argNames: ["that", "statements"],
-        );
-        
-
-
-            Future<void> Function(int, dynamic)
-                encode_DartFn_Inputs_bool_Output_String_AnyhowException(FutureOr<String> Function(bool) raw) {
-              return (callId, rawArg0) async {
-                final arg0 = dco_decode_bool(rawArg0);
-
-
-                Box<String>? rawOutput;
-                Box<AnyhowException>? rawError;
-                try {
-                    rawOutput = Box(await raw(arg0));
-                } catch (e, s) {
-                    rawError = Box(AnyhowException("$e\n\n$s"));
-                }
-
-                final serializer = SseSerializer(generalizedFrbRustBinding);
-                assert((rawOutput != null) ^ (rawError != null));
-                if (rawOutput != null) {
-                    serializer.buffer.putUint8(0);
-                    sse_encode_String(rawOutput.value, serializer);
-                } else {
-                    serializer.buffer.putUint8(1);
-                    sse_encode_AnyhowException(rawError!.value, serializer);
-                }
-                final output = serializer.intoRaw();
-
-                generalizedFrbRustBinding.dartFnDeliverOutput(
-                  callId: callId, ptr: output.ptr, rustVecLen: output.rustVecLen, dataLen: output.dataLen);
-              };
-            }
-            RustArcIncrementStrongCountFnType get rust_arc_increment_strong_count_SyncEngine => wire.rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine;
-
-RustArcDecrementStrongCountFnType get rust_arc_decrement_strong_count_SyncEngine => wire.rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine;
-
-
-
-                  @protected AnyhowException dco_decode_AnyhowException(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return AnyhowException(raw as String); }
-
-@protected SyncEngine dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return SyncEngineImpl.frbInternalDcoDecode(raw as List<dynamic>); }
-
-@protected SyncEngine dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return SyncEngineImpl.frbInternalDcoDecode(raw as List<dynamic>); }
-
-@protected FutureOr<String> Function(bool) dco_decode_DartFn_Inputs_bool_Output_String_AnyhowException(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-throw UnimplementedError(''); }
-
-@protected Object dco_decode_DartOpaque(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return decodeDartOpaque(raw, generalizedFrbRustBinding); }
-
-@protected SyncEngine dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return SyncEngineImpl.frbInternalDcoDecode(raw as List<dynamic>); }
-
-@protected RustStreamSink<FfiEvent> dco_decode_StreamSink_ffi_event_Sse(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-throw UnimplementedError(); }
-
-@protected RustStreamSink<FfiRows> dco_decode_StreamSink_ffi_rows_Sse(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-throw UnimplementedError(); }
-
-@protected RustStreamSink<FfiStatus> dco_decode_StreamSink_ffi_status_Sse(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-throw UnimplementedError(); }
-
-@protected RustStreamSink<List<String>> dco_decode_StreamSink_list_String_Sse(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-throw UnimplementedError(); }
-
-@protected String dco_decode_String(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as String; }
-
-@protected bool dco_decode_bool(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as bool; }
-
-@protected FfiConfig dco_decode_box_autoadd_ffi_config(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_ffi_config(raw); }
-
-@protected PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_i_64(raw); }
-
-@protected int dco_decode_box_autoadd_u_32(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as int; }
-
-@protected double dco_decode_f_64(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as double; }
-
-@protected FfiConfig dco_decode_ffi_config(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 6) throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
-                return FfiConfig(dbPath: dco_decode_String(arr[0]),
-manifestJson: dco_decode_String(arr[1]),
-migrationsJson: dco_decode_String(arr[2]),
-defaultScope: dco_decode_opt_String(arr[3]),
-baseUrl: dco_decode_String(arr[4]),
-pullLimit: dco_decode_opt_box_autoadd_u_32(arr[5]),); }
-
-@protected FfiError dco_decode_ffi_error(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 2) throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
-                return FfiError(code: dco_decode_String(arr[0]),
-message: dco_decode_String(arr[1]),); }
-
-@protected FfiEvent dco_decode_ffi_event(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 8) throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
-                return FfiEvent(kind: dco_decode_String(arr[0]),
-scope: dco_decode_opt_String(arr[1]),
-table: dco_decode_opt_String(arr[2]),
-id: dco_decode_opt_String(arr[3]),
-code: dco_decode_opt_String(arr[4]),
-message: dco_decode_opt_String(arr[5]),
-droppedChanges: dco_decode_opt_box_autoadd_i_64(arr[6]),
-minSchemaVersion: dco_decode_opt_box_autoadd_i_64(arr[7]),); }
-
-@protected FfiReport dco_decode_ffi_report(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 6) throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
-                return FfiReport(pushed: dco_decode_u_32(arr[0]),
-conflicts: dco_decode_u_32(arr[1]),
-rejected: dco_decode_u_32(arr[2]),
-pulled: dco_decode_u_32(arr[3]),
-cycles: dco_decode_u_32(arr[4]),
-coalesced: dco_decode_bool(arr[5]),); }
-
-@protected FfiRows dco_decode_ffi_rows(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 2) throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
-                return FfiRows(columns: dco_decode_list_String(arr[0]),
-rows: dco_decode_list_list_ffi_value(arr[1]),); }
-
-@protected FfiStatement dco_decode_ffi_statement(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 2) throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
-                return FfiStatement(sql: dco_decode_String(arr[0]),
-params: dco_decode_list_ffi_value(arr[1]),); }
-
-@protected FfiStatus dco_decode_ffi_status(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 4) throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
-                return FfiStatus(phase: dco_decode_String(arr[0]),
-pendingChanges: dco_decode_i_64(arr[1]),
-lastSyncAt: dco_decode_opt_box_autoadd_i_64(arr[2]),
-lastError: dco_decode_opt_String(arr[3]),); }
-
-@protected FfiValue dco_decode_ffi_value(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-switch (raw[0]) {
-                case 0: return FfiValue_Null();
-case 1: return FfiValue_Integer(dco_decode_i_64(raw[1]),);
-case 2: return FfiValue_Real(dco_decode_f_64(raw[1]),);
-case 3: return FfiValue_Text(dco_decode_String(raw[1]),);
-case 4: return FfiValue_Blob(dco_decode_list_prim_u_8_strict(raw[1]),);
-                default: throw Exception("unreachable");
-            } }
-
-@protected PlatformInt64 dco_decode_i_64(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dcoDecodeI64(raw); }
-
-@protected PlatformInt64 dco_decode_isize(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dcoDecodeI64(raw); }
-
-@protected List<String> dco_decode_list_String(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_String).toList(); }
-
-@protected List<FfiStatement> dco_decode_list_ffi_statement(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_ffi_statement).toList(); }
-
-@protected List<FfiValue> dco_decode_list_ffi_value(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_ffi_value).toList(); }
-
-@protected List<List<FfiValue>> dco_decode_list_list_ffi_value(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_list_ffi_value).toList(); }
-
-@protected Uint8List dco_decode_list_prim_u_8_strict(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as Uint8List; }
-
-@protected String? dco_decode_opt_String(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw == null ? null : dco_decode_String(raw); }
-
-@protected PlatformInt64? dco_decode_opt_box_autoadd_i_64(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw == null ? null : dco_decode_box_autoadd_i_64(raw); }
-
-@protected int? dco_decode_opt_box_autoadd_u_32(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw == null ? null : dco_decode_box_autoadd_u_32(raw); }
-
-@protected int dco_decode_u_32(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as int; }
-
-@protected int dco_decode_u_8(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as int; }
-
-@protected void dco_decode_unit(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return; }
-
-@protected BigInt dco_decode_usize(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dcoDecodeU64(raw); }
-
-@protected AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_String(deserializer);
-        return AnyhowException(inner); }
-
-@protected SyncEngine sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return SyncEngineImpl.frbInternalSseDecode(sse_decode_usize(deserializer), sse_decode_i_32(deserializer)); }
-
-@protected SyncEngine sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return SyncEngineImpl.frbInternalSseDecode(sse_decode_usize(deserializer), sse_decode_i_32(deserializer)); }
-
-@protected Object sse_decode_DartOpaque(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_isize(deserializer);
-        return decodeDartOpaque(inner, generalizedFrbRustBinding); }
-
-@protected SyncEngine sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return SyncEngineImpl.frbInternalSseDecode(sse_decode_usize(deserializer), sse_decode_i_32(deserializer)); }
-
-@protected RustStreamSink<FfiEvent> sse_decode_StreamSink_ffi_event_Sse(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-throw UnimplementedError('Unreachable ()'); }
-
-@protected RustStreamSink<FfiRows> sse_decode_StreamSink_ffi_rows_Sse(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-throw UnimplementedError('Unreachable ()'); }
-
-@protected RustStreamSink<FfiStatus> sse_decode_StreamSink_ffi_status_Sse(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-throw UnimplementedError('Unreachable ()'); }
-
-@protected RustStreamSink<List<String>> sse_decode_StreamSink_list_String_Sse(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-throw UnimplementedError('Unreachable ()'); }
-
-@protected String sse_decode_String(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_list_prim_u_8_strict(deserializer);
-        return utf8.decoder.convert(inner); }
-
-@protected bool sse_decode_bool(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getUint8() != 0; }
-
-@protected FfiConfig sse_decode_box_autoadd_ffi_config(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_ffi_config(deserializer)); }
-
-@protected PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_i_64(deserializer)); }
-
-@protected int sse_decode_box_autoadd_u_32(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_u_32(deserializer)); }
-
-@protected double sse_decode_f_64(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getFloat64(); }
-
-@protected FfiConfig sse_decode_ffi_config(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_dbPath = sse_decode_String(deserializer);
-var var_manifestJson = sse_decode_String(deserializer);
-var var_migrationsJson = sse_decode_String(deserializer);
-var var_defaultScope = sse_decode_opt_String(deserializer);
-var var_baseUrl = sse_decode_String(deserializer);
-var var_pullLimit = sse_decode_opt_box_autoadd_u_32(deserializer);
-return FfiConfig(dbPath: var_dbPath, manifestJson: var_manifestJson, migrationsJson: var_migrationsJson, defaultScope: var_defaultScope, baseUrl: var_baseUrl, pullLimit: var_pullLimit); }
-
-@protected FfiError sse_decode_ffi_error(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_code = sse_decode_String(deserializer);
-var var_message = sse_decode_String(deserializer);
-return FfiError(code: var_code, message: var_message); }
-
-@protected FfiEvent sse_decode_ffi_event(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_kind = sse_decode_String(deserializer);
-var var_scope = sse_decode_opt_String(deserializer);
-var var_table = sse_decode_opt_String(deserializer);
-var var_id = sse_decode_opt_String(deserializer);
-var var_code = sse_decode_opt_String(deserializer);
-var var_message = sse_decode_opt_String(deserializer);
-var var_droppedChanges = sse_decode_opt_box_autoadd_i_64(deserializer);
-var var_minSchemaVersion = sse_decode_opt_box_autoadd_i_64(deserializer);
-return FfiEvent(kind: var_kind, scope: var_scope, table: var_table, id: var_id, code: var_code, message: var_message, droppedChanges: var_droppedChanges, minSchemaVersion: var_minSchemaVersion); }
-
-@protected FfiReport sse_decode_ffi_report(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_pushed = sse_decode_u_32(deserializer);
-var var_conflicts = sse_decode_u_32(deserializer);
-var var_rejected = sse_decode_u_32(deserializer);
-var var_pulled = sse_decode_u_32(deserializer);
-var var_cycles = sse_decode_u_32(deserializer);
-var var_coalesced = sse_decode_bool(deserializer);
-return FfiReport(pushed: var_pushed, conflicts: var_conflicts, rejected: var_rejected, pulled: var_pulled, cycles: var_cycles, coalesced: var_coalesced); }
-
-@protected FfiRows sse_decode_ffi_rows(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_columns = sse_decode_list_String(deserializer);
-var var_rows = sse_decode_list_list_ffi_value(deserializer);
-return FfiRows(columns: var_columns, rows: var_rows); }
-
-@protected FfiStatement sse_decode_ffi_statement(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_sql = sse_decode_String(deserializer);
-var var_params = sse_decode_list_ffi_value(deserializer);
-return FfiStatement(sql: var_sql, params: var_params); }
-
-@protected FfiStatus sse_decode_ffi_status(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_phase = sse_decode_String(deserializer);
-var var_pendingChanges = sse_decode_i_64(deserializer);
-var var_lastSyncAt = sse_decode_opt_box_autoadd_i_64(deserializer);
-var var_lastError = sse_decode_opt_String(deserializer);
-return FfiStatus(phase: var_phase, pendingChanges: var_pendingChanges, lastSyncAt: var_lastSyncAt, lastError: var_lastError); }
-
-@protected FfiValue sse_decode_ffi_value(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            var tag_ = sse_decode_i_32(deserializer);
-            switch (tag_) { case 0: return FfiValue_Null();case 1: var var_field0 = sse_decode_i_64(deserializer);
-return FfiValue_Integer(var_field0);case 2: var var_field0 = sse_decode_f_64(deserializer);
-return FfiValue_Real(var_field0);case 3: var var_field0 = sse_decode_String(deserializer);
-return FfiValue_Text(var_field0);case 4: var var_field0 = sse_decode_list_prim_u_8_strict(deserializer);
-return FfiValue_Blob(var_field0); default: throw UnimplementedError(''); }
-             }
-
-@protected PlatformInt64 sse_decode_i_64(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getPlatformInt64(); }
-
-@protected PlatformInt64 sse_decode_isize(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getPlatformInt64(); }
-
-@protected List<String> sse_decode_list_String(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <String>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_String(deserializer)); }
-        return ans_;
-         }
-
-@protected List<FfiStatement> sse_decode_list_ffi_statement(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <FfiStatement>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_ffi_statement(deserializer)); }
-        return ans_;
-         }
-
-@protected List<FfiValue> sse_decode_list_ffi_value(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <FfiValue>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_ffi_value(deserializer)); }
-        return ans_;
-         }
-
-@protected List<List<FfiValue>> sse_decode_list_list_ffi_value(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <List<FfiValue>>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_list_ffi_value(deserializer)); }
-        return ans_;
-         }
-
-@protected Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var len_ = sse_decode_i_32(deserializer);
-                return deserializer.buffer.getUint8List(len_); }
-
-@protected String? sse_decode_opt_String(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            if (sse_decode_bool(deserializer)) {
-                return (sse_decode_String(deserializer));
-            } else {
-                return null;
-            }
-             }
-
-@protected PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            if (sse_decode_bool(deserializer)) {
-                return (sse_decode_box_autoadd_i_64(deserializer));
-            } else {
-                return null;
-            }
-             }
-
-@protected int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            if (sse_decode_bool(deserializer)) {
-                return (sse_decode_box_autoadd_u_32(deserializer));
-            } else {
-                return null;
-            }
-             }
-
-@protected int sse_decode_u_32(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getUint32(); }
-
-@protected int sse_decode_u_8(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getUint8(); }
-
-@protected void sse_decode_unit(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
- }
-
-@protected BigInt sse_decode_usize(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getBigUint64(); }
-
-@protected int sse_decode_i_32(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getInt32(); }
-
-@protected void sse_encode_AnyhowException(AnyhowException self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.message, serializer); }
-
-@protected void sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(SyncEngine self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_usize((self as SyncEngineImpl).frbInternalSseEncode(move: true), serializer); }
-
-@protected void sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(SyncEngine self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_usize((self as SyncEngineImpl).frbInternalSseEncode(move: false), serializer); }
-
-@protected void sse_encode_DartFn_Inputs_bool_Output_String_AnyhowException(FutureOr<String> Function(bool) self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_DartOpaque(encode_DartFn_Inputs_bool_Output_String_AnyhowException(self), serializer); }
-
-@protected void sse_encode_DartOpaque(Object self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_isize(PlatformPointerUtil.ptrToPlatformInt64(encodeDartOpaque(self, portManager.dartHandlerPort, generalizedFrbRustBinding)), serializer); }
-
-@protected void sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(SyncEngine self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_usize((self as SyncEngineImpl).frbInternalSseEncode(move: null), serializer); }
-
-@protected void sse_encode_StreamSink_ffi_event_Sse(RustStreamSink<FfiEvent> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.setupAndSerialize(codec: SseCodec(
-            decodeSuccessData: sse_decode_ffi_event,
-            decodeErrorData: sse_decode_AnyhowException,
-        )), serializer); }
-
-@protected void sse_encode_StreamSink_ffi_rows_Sse(RustStreamSink<FfiRows> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.setupAndSerialize(codec: SseCodec(
-            decodeSuccessData: sse_decode_ffi_rows,
-            decodeErrorData: sse_decode_AnyhowException,
-        )), serializer); }
-
-@protected void sse_encode_StreamSink_ffi_status_Sse(RustStreamSink<FfiStatus> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.setupAndSerialize(codec: SseCodec(
-            decodeSuccessData: sse_decode_ffi_status,
-            decodeErrorData: sse_decode_AnyhowException,
-        )), serializer); }
-
-@protected void sse_encode_StreamSink_list_String_Sse(RustStreamSink<List<String>> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.setupAndSerialize(codec: SseCodec(
-            decodeSuccessData: sse_decode_list_String,
-            decodeErrorData: sse_decode_AnyhowException,
-        )), serializer); }
-
-@protected void sse_encode_String(String self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_list_prim_u_8_strict(utf8.encoder.convert(self), serializer); }
-
-@protected void sse_encode_bool(bool self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putUint8(self ? 1 : 0); }
-
-@protected void sse_encode_box_autoadd_ffi_config(FfiConfig self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_ffi_config(self, serializer); }
-
-@protected void sse_encode_box_autoadd_i_64(PlatformInt64 self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_64(self, serializer); }
-
-@protected void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_32(self, serializer); }
-
-@protected void sse_encode_f_64(double self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putFloat64(self); }
-
-@protected void sse_encode_ffi_config(FfiConfig self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.dbPath, serializer);
-sse_encode_String(self.manifestJson, serializer);
-sse_encode_String(self.migrationsJson, serializer);
-sse_encode_opt_String(self.defaultScope, serializer);
-sse_encode_String(self.baseUrl, serializer);
-sse_encode_opt_box_autoadd_u_32(self.pullLimit, serializer);
- }
-
-@protected void sse_encode_ffi_error(FfiError self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.code, serializer);
-sse_encode_String(self.message, serializer);
- }
-
-@protected void sse_encode_ffi_event(FfiEvent self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.kind, serializer);
-sse_encode_opt_String(self.scope, serializer);
-sse_encode_opt_String(self.table, serializer);
-sse_encode_opt_String(self.id, serializer);
-sse_encode_opt_String(self.code, serializer);
-sse_encode_opt_String(self.message, serializer);
-sse_encode_opt_box_autoadd_i_64(self.droppedChanges, serializer);
-sse_encode_opt_box_autoadd_i_64(self.minSchemaVersion, serializer);
- }
-
-@protected void sse_encode_ffi_report(FfiReport self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_32(self.pushed, serializer);
-sse_encode_u_32(self.conflicts, serializer);
-sse_encode_u_32(self.rejected, serializer);
-sse_encode_u_32(self.pulled, serializer);
-sse_encode_u_32(self.cycles, serializer);
-sse_encode_bool(self.coalesced, serializer);
- }
-
-@protected void sse_encode_ffi_rows(FfiRows self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_list_String(self.columns, serializer);
-sse_encode_list_list_ffi_value(self.rows, serializer);
- }
-
-@protected void sse_encode_ffi_statement(FfiStatement self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.sql, serializer);
-sse_encode_list_ffi_value(self.params, serializer);
- }
-
-@protected void sse_encode_ffi_status(FfiStatus self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.phase, serializer);
-sse_encode_i_64(self.pendingChanges, serializer);
-sse_encode_opt_box_autoadd_i_64(self.lastSyncAt, serializer);
-sse_encode_opt_String(self.lastError, serializer);
- }
-
-@protected void sse_encode_ffi_value(FfiValue self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-switch (self) { case FfiValue_Null(): sse_encode_i_32(0, serializer); case FfiValue_Integer(field0: final field0): sse_encode_i_32(1, serializer); sse_encode_i_64(field0, serializer);
-case FfiValue_Real(field0: final field0): sse_encode_i_32(2, serializer); sse_encode_f_64(field0, serializer);
-case FfiValue_Text(field0: final field0): sse_encode_i_32(3, serializer); sse_encode_String(field0, serializer);
-case FfiValue_Blob(field0: final field0): sse_encode_i_32(4, serializer); sse_encode_list_prim_u_8_strict(field0, serializer);
-  } }
-
-@protected void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putPlatformInt64(self); }
-
-@protected void sse_encode_isize(PlatformInt64 self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putPlatformInt64(self); }
-
-@protected void sse_encode_list_String(List<String> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_String(item, serializer); } }
-
-@protected void sse_encode_list_ffi_statement(List<FfiStatement> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_ffi_statement(item, serializer); } }
-
-@protected void sse_encode_list_ffi_value(List<FfiValue> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_ffi_value(item, serializer); } }
-
-@protected void sse_encode_list_list_ffi_value(List<List<FfiValue>> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_list_ffi_value(item, serializer); } }
-
-@protected void sse_encode_list_prim_u_8_strict(Uint8List self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-                    serializer.buffer.putUint8List(self); }
-
-@protected void sse_encode_opt_String(String? self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-                sse_encode_bool(self != null, serializer);
-                if (self != null) {
-                    sse_encode_String(self, serializer);
-                }
-                 }
-
-@protected void sse_encode_opt_box_autoadd_i_64(PlatformInt64? self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-                sse_encode_bool(self != null, serializer);
-                if (self != null) {
-                    sse_encode_box_autoadd_i_64(self, serializer);
-                }
-                 }
-
-@protected void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-                sse_encode_bool(self != null, serializer);
-                if (self != null) {
-                    sse_encode_box_autoadd_u_32(self, serializer);
-                }
-                 }
-
-@protected void sse_encode_u_32(int self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putUint32(self); }
-
-@protected void sse_encode_u_8(int self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putUint8(self); }
-
-@protected void sse_encode_unit(void self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
- }
-
-@protected void sse_encode_usize(BigInt self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putBigUint64(self); }
-
-@protected void sse_encode_i_32(int self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putInt32(self); }
-                }
-                
-
-            @sealed class SyncEngineImpl extends RustOpaque implements SyncEngine {
-                // Not to be used by end users
-                SyncEngineImpl.frbInternalDcoDecode(List<dynamic> wire):
-                    super.frbInternalDcoDecode(wire, _kStaticData);
-
-                // Not to be used by end users
-                SyncEngineImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative):
-                    super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
-
-                static final _kStaticData = RustArcStaticData(
-                    rustArcIncrementStrongCount: RustLib.instance.api.rust_arc_increment_strong_count_SyncEngine,
-                    rustArcDecrementStrongCount: RustLib.instance.api.rust_arc_decrement_strong_count_SyncEngine,
-                    rustArcDecrementStrongCountPtr: RustLib.instance.api.rust_arc_decrement_strong_count_SyncEnginePtr,
-                );
-
-                /// Sync state as JSON, for support. Contains no record data.
- Future<String>  debugDump()=>RustLib.instance.api.crateApiEngineSyncEngineDebugDump(that: this, );
-
-
- Future<String>  deviceId()=>RustLib.instance.api.crateApiEngineSyncEngineDeviceId(that: this, );
-
-
-/// Run a statement that changes data; returns the number of rows changed.
- Future<PlatformInt64>  execute({required String sql , required List<FfiValue> params })=>RustLib.instance.api.crateApiEngineSyncEngineExecute(that: this, sql: sql, params: params);
-
-
-/// A new record ID (UUIDv7).
- String  newId()=>RustLib.instance.api.crateApiEngineSyncEngineNewId(that: this, );
-
-
- Future<FfiRows>  query({required String sql , required List<FfiValue> params })=>RustLib.instance.api.crateApiEngineSyncEngineQuery(that: this, sql: sql, params: params);
-
-
- Future<void>  signOut({required bool discardPending })=>RustLib.instance.api.crateApiEngineSyncEngineSignOut(that: this, discardPending: discardPending);
-
-
- Future<FfiStatus>  status()=>RustLib.instance.api.crateApiEngineSyncEngineStatus(that: this, );
-
-
-/// Things to show the user, such as `change_rejected` and
-/// `upgrade_required`. Use `eventStream` from Dart.
- Stream<FfiEvent>  subscribeEvents({required PlatformInt64 subscription })=>RustLib.instance.api.crateApiEngineSyncEngineSubscribeEvents(that: this, subscription: subscription);
-
-
-/// Status changes. Use `statusStream` from Dart.
- Stream<FfiStatus>  subscribeStatus({required PlatformInt64 subscription })=>RustLib.instance.api.crateApiEngineSyncEngineSubscribeStatus(that: this, subscription: subscription);
-
-
-/// Names of tables changed by local writes or by sync. Use
-/// `tablesChangedStream` from Dart.
- Stream<List<String>>  subscribeTables({required PlatformInt64 subscription })=>RustLib.instance.api.crateApiEngineSyncEngineSubscribeTables(that: this, subscription: subscription);
-
-
-/// Emits the query result now and again whenever a table it reads
-/// changes. Use `watch` from Dart.
- Stream<FfiRows>  subscribeWatch({required PlatformInt64 subscription , required String sql , required List<FfiValue> params })=>RustLib.instance.api.crateApiEngineSyncEngineSubscribeWatch(that: this, subscription: subscription, sql: sql, params: params);
-
-
- Future<FfiReport>  syncNow()=>RustLib.instance.api.crateApiEngineSyncEngineSyncNow(that: this, );
-
-
-/// Close a stream opened with a `subscribe_*` function. Its Dart stream
-/// then ends.
- Future<void>  unsubscribe({required PlatformInt64 subscription })=>RustLib.instance.api.crateApiEngineSyncEngineUnsubscribe(that: this, subscription: subscription);
-
-
-/// Run several statements in one transaction.
- Future<void>  writeBatch({required List<FfiStatement> statements })=>RustLib.instance.api.crateApiEngineSyncEngineWriteBatch(that: this, statements: statements);
-
-
-            }
+        ),
+        constMeta: kCrateApiEngineSyncEngineWriteBatchConstMeta,
+        argValues: [that, statements],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiEngineSyncEngineWriteBatchConstMeta =>
+      const TaskConstMeta(
+        debugName: "SyncEngine_write_batch",
+        argNames: ["that", "statements"],
+      );
+
+  Future<void> Function(int, dynamic)
+  encode_DartFn_Inputs_bool_Output_String_AnyhowException(
+    FutureOr<String> Function(bool) raw,
+  ) {
+    return (callId, rawArg0) async {
+      final arg0 = dco_decode_bool(rawArg0);
+
+      Box<String>? rawOutput;
+      Box<AnyhowException>? rawError;
+      try {
+        rawOutput = Box(await raw(arg0));
+      } catch (e, s) {
+        rawError = Box(AnyhowException("$e\n\n$s"));
+      }
+
+      final serializer = SseSerializer(generalizedFrbRustBinding);
+      assert((rawOutput != null) ^ (rawError != null));
+      if (rawOutput != null) {
+        serializer.buffer.putUint8(0);
+        sse_encode_String(rawOutput.value, serializer);
+      } else {
+        serializer.buffer.putUint8(1);
+        sse_encode_AnyhowException(rawError!.value, serializer);
+      }
+      final output = serializer.intoRaw();
+
+      generalizedFrbRustBinding.dartFnDeliverOutput(
+        callId: callId,
+        ptr: output.ptr,
+        rustVecLen: output.rustVecLen,
+        dataLen: output.dataLen,
+      );
+    };
+  }
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_SyncEngine => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_SyncEngine => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine;
+
+  @protected
+  AnyhowException dco_decode_AnyhowException(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return AnyhowException(raw as String);
+  }
+
+  @protected
+  SyncEngine
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return SyncEngineImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  SyncEngine
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return SyncEngineImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  FutureOr<String> Function(bool)
+  dco_decode_DartFn_Inputs_bool_Output_String_AnyhowException(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError('');
+  }
+
+  @protected
+  Object dco_decode_DartOpaque(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return decodeDartOpaque(raw, generalizedFrbRustBinding);
+  }
+
+  @protected
+  SyncEngine
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return SyncEngineImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  RustStreamSink<FfiEvent> dco_decode_StreamSink_ffi_event_Sse(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
+  RustStreamSink<FfiRows> dco_decode_StreamSink_ffi_rows_Sse(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
+  RustStreamSink<FfiStatus> dco_decode_StreamSink_ffi_status_Sse(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
+  RustStreamSink<List<String>> dco_decode_StreamSink_list_String_Sse(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
+  String dco_decode_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as String;
+  }
+
+  @protected
+  bool dco_decode_bool(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as bool;
+  }
+
+  @protected
+  FfiConfig dco_decode_box_autoadd_ffi_config(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_ffi_config(raw);
+  }
+
+  @protected
+  PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_i_64(raw);
+  }
+
+  @protected
+  int dco_decode_box_autoadd_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  double dco_decode_f_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as double;
+  }
+
+  @protected
+  FfiConfig dco_decode_ffi_config(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return FfiConfig(
+      dbPath: dco_decode_String(arr[0]),
+      manifestJson: dco_decode_String(arr[1]),
+      migrationsJson: dco_decode_String(arr[2]),
+      defaultScope: dco_decode_opt_String(arr[3]),
+      baseUrl: dco_decode_String(arr[4]),
+      pullLimit: dco_decode_opt_box_autoadd_u_32(arr[5]),
+    );
+  }
+
+  @protected
+  FfiError dco_decode_ffi_error(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return FfiError(
+      code: dco_decode_String(arr[0]),
+      message: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
+  FfiEvent dco_decode_ffi_event(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return FfiEvent(
+      kind: dco_decode_String(arr[0]),
+      scope: dco_decode_opt_String(arr[1]),
+      table: dco_decode_opt_String(arr[2]),
+      id: dco_decode_opt_String(arr[3]),
+      code: dco_decode_opt_String(arr[4]),
+      message: dco_decode_opt_String(arr[5]),
+      droppedChanges: dco_decode_opt_box_autoadd_i_64(arr[6]),
+      minSchemaVersion: dco_decode_opt_box_autoadd_i_64(arr[7]),
+    );
+  }
+
+  @protected
+  FfiReport dco_decode_ffi_report(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return FfiReport(
+      pushed: dco_decode_u_32(arr[0]),
+      conflicts: dco_decode_u_32(arr[1]),
+      rejected: dco_decode_u_32(arr[2]),
+      pulled: dco_decode_u_32(arr[3]),
+      cycles: dco_decode_u_32(arr[4]),
+      coalesced: dco_decode_bool(arr[5]),
+    );
+  }
+
+  @protected
+  FfiRows dco_decode_ffi_rows(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return FfiRows(
+      columns: dco_decode_list_String(arr[0]),
+      rows: dco_decode_list_list_ffi_value(arr[1]),
+    );
+  }
+
+  @protected
+  FfiStatement dco_decode_ffi_statement(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return FfiStatement(
+      sql: dco_decode_String(arr[0]),
+      params: dco_decode_list_ffi_value(arr[1]),
+    );
+  }
+
+  @protected
+  FfiStatus dco_decode_ffi_status(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return FfiStatus(
+      phase: dco_decode_String(arr[0]),
+      pendingChanges: dco_decode_i_64(arr[1]),
+      lastSyncAt: dco_decode_opt_box_autoadd_i_64(arr[2]),
+      lastError: dco_decode_opt_String(arr[3]),
+    );
+  }
+
+  @protected
+  FfiValue dco_decode_ffi_value(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    switch (raw[0]) {
+      case 0:
+        return FfiValue_Null();
+      case 1:
+        return FfiValue_Integer(dco_decode_i_64(raw[1]));
+      case 2:
+        return FfiValue_Real(dco_decode_f_64(raw[1]));
+      case 3:
+        return FfiValue_Text(dco_decode_String(raw[1]));
+      case 4:
+        return FfiValue_Blob(dco_decode_list_prim_u_8_strict(raw[1]));
+      default:
+        throw Exception("unreachable");
+    }
+  }
+
+  @protected
+  PlatformInt64 dco_decode_i_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeI64(raw);
+  }
+
+  @protected
+  PlatformInt64 dco_decode_isize(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeI64(raw);
+  }
+
+  @protected
+  List<String> dco_decode_list_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_String).toList();
+  }
+
+  @protected
+  List<FfiStatement> dco_decode_list_ffi_statement(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_ffi_statement).toList();
+  }
+
+  @protected
+  List<FfiValue> dco_decode_list_ffi_value(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_ffi_value).toList();
+  }
+
+  @protected
+  List<List<FfiValue>> dco_decode_list_list_ffi_value(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_list_ffi_value).toList();
+  }
+
+  @protected
+  Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as Uint8List;
+  }
+
+  @protected
+  String? dco_decode_opt_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_String(raw);
+  }
+
+  @protected
+  PlatformInt64? dco_decode_opt_box_autoadd_i_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_i_64(raw);
+  }
+
+  @protected
+  int? dco_decode_opt_box_autoadd_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_u_32(raw);
+  }
+
+  @protected
+  int dco_decode_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  int dco_decode_u_8(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  void dco_decode_unit(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return;
+  }
+
+  @protected
+  BigInt dco_decode_usize(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeU64(raw);
+  }
+
+  @protected
+  AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_String(deserializer);
+    return AnyhowException(inner);
+  }
+
+  @protected
+  SyncEngine
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return SyncEngineImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  SyncEngine
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return SyncEngineImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  Object sse_decode_DartOpaque(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_isize(deserializer);
+    return decodeDartOpaque(inner, generalizedFrbRustBinding);
+  }
+
+  @protected
+  SyncEngine
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return SyncEngineImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  RustStreamSink<FfiEvent> sse_decode_StreamSink_ffi_event_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
+  RustStreamSink<FfiRows> sse_decode_StreamSink_ffi_rows_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
+  RustStreamSink<FfiStatus> sse_decode_StreamSink_ffi_status_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
+  RustStreamSink<List<String>> sse_decode_StreamSink_list_String_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
+  String sse_decode_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_list_prim_u_8_strict(deserializer);
+    return utf8.decoder.convert(inner);
+  }
+
+  @protected
+  bool sse_decode_bool(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint8() != 0;
+  }
+
+  @protected
+  FfiConfig sse_decode_box_autoadd_ffi_config(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_ffi_config(deserializer));
+  }
+
+  @protected
+  PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_i_64(deserializer));
+  }
+
+  @protected
+  int sse_decode_box_autoadd_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_u_32(deserializer));
+  }
+
+  @protected
+  double sse_decode_f_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getFloat64();
+  }
+
+  @protected
+  FfiConfig sse_decode_ffi_config(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_dbPath = sse_decode_String(deserializer);
+    var var_manifestJson = sse_decode_String(deserializer);
+    var var_migrationsJson = sse_decode_String(deserializer);
+    var var_defaultScope = sse_decode_opt_String(deserializer);
+    var var_baseUrl = sse_decode_String(deserializer);
+    var var_pullLimit = sse_decode_opt_box_autoadd_u_32(deserializer);
+    return FfiConfig(
+      dbPath: var_dbPath,
+      manifestJson: var_manifestJson,
+      migrationsJson: var_migrationsJson,
+      defaultScope: var_defaultScope,
+      baseUrl: var_baseUrl,
+      pullLimit: var_pullLimit,
+    );
+  }
+
+  @protected
+  FfiError sse_decode_ffi_error(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_code = sse_decode_String(deserializer);
+    var var_message = sse_decode_String(deserializer);
+    return FfiError(code: var_code, message: var_message);
+  }
+
+  @protected
+  FfiEvent sse_decode_ffi_event(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_String(deserializer);
+    var var_scope = sse_decode_opt_String(deserializer);
+    var var_table = sse_decode_opt_String(deserializer);
+    var var_id = sse_decode_opt_String(deserializer);
+    var var_code = sse_decode_opt_String(deserializer);
+    var var_message = sse_decode_opt_String(deserializer);
+    var var_droppedChanges = sse_decode_opt_box_autoadd_i_64(deserializer);
+    var var_minSchemaVersion = sse_decode_opt_box_autoadd_i_64(deserializer);
+    return FfiEvent(
+      kind: var_kind,
+      scope: var_scope,
+      table: var_table,
+      id: var_id,
+      code: var_code,
+      message: var_message,
+      droppedChanges: var_droppedChanges,
+      minSchemaVersion: var_minSchemaVersion,
+    );
+  }
+
+  @protected
+  FfiReport sse_decode_ffi_report(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_pushed = sse_decode_u_32(deserializer);
+    var var_conflicts = sse_decode_u_32(deserializer);
+    var var_rejected = sse_decode_u_32(deserializer);
+    var var_pulled = sse_decode_u_32(deserializer);
+    var var_cycles = sse_decode_u_32(deserializer);
+    var var_coalesced = sse_decode_bool(deserializer);
+    return FfiReport(
+      pushed: var_pushed,
+      conflicts: var_conflicts,
+      rejected: var_rejected,
+      pulled: var_pulled,
+      cycles: var_cycles,
+      coalesced: var_coalesced,
+    );
+  }
+
+  @protected
+  FfiRows sse_decode_ffi_rows(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_columns = sse_decode_list_String(deserializer);
+    var var_rows = sse_decode_list_list_ffi_value(deserializer);
+    return FfiRows(columns: var_columns, rows: var_rows);
+  }
+
+  @protected
+  FfiStatement sse_decode_ffi_statement(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_sql = sse_decode_String(deserializer);
+    var var_params = sse_decode_list_ffi_value(deserializer);
+    return FfiStatement(sql: var_sql, params: var_params);
+  }
+
+  @protected
+  FfiStatus sse_decode_ffi_status(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_phase = sse_decode_String(deserializer);
+    var var_pendingChanges = sse_decode_i_64(deserializer);
+    var var_lastSyncAt = sse_decode_opt_box_autoadd_i_64(deserializer);
+    var var_lastError = sse_decode_opt_String(deserializer);
+    return FfiStatus(
+      phase: var_phase,
+      pendingChanges: var_pendingChanges,
+      lastSyncAt: var_lastSyncAt,
+      lastError: var_lastError,
+    );
+  }
+
+  @protected
+  FfiValue sse_decode_ffi_value(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var tag_ = sse_decode_i_32(deserializer);
+    switch (tag_) {
+      case 0:
+        return FfiValue_Null();
+      case 1:
+        var var_field0 = sse_decode_i_64(deserializer);
+        return FfiValue_Integer(var_field0);
+      case 2:
+        var var_field0 = sse_decode_f_64(deserializer);
+        return FfiValue_Real(var_field0);
+      case 3:
+        var var_field0 = sse_decode_String(deserializer);
+        return FfiValue_Text(var_field0);
+      case 4:
+        var var_field0 = sse_decode_list_prim_u_8_strict(deserializer);
+        return FfiValue_Blob(var_field0);
+      default:
+        throw UnimplementedError('');
+    }
+  }
+
+  @protected
+  PlatformInt64 sse_decode_i_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getPlatformInt64();
+  }
+
+  @protected
+  PlatformInt64 sse_decode_isize(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getPlatformInt64();
+  }
+
+  @protected
+  List<String> sse_decode_list_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <String>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_String(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<FfiStatement> sse_decode_list_ffi_statement(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <FfiStatement>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_ffi_statement(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<FfiValue> sse_decode_list_ffi_value(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <FfiValue>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_ffi_value(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<List<FfiValue>> sse_decode_list_list_ffi_value(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <List<FfiValue>>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_list_ffi_value(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var len_ = sse_decode_i_32(deserializer);
+    return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
+  String? sse_decode_opt_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_String(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_i_64(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_u_32(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  int sse_decode_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint32();
+  }
+
+  @protected
+  int sse_decode_u_8(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint8();
+  }
+
+  @protected
+  void sse_decode_unit(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+  }
+
+  @protected
+  BigInt sse_decode_usize(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getBigUint64();
+  }
+
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getInt32();
+  }
+
+  @protected
+  void sse_encode_AnyhowException(
+    AnyhowException self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.message, serializer);
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(
+    SyncEngine self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as SyncEngineImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(
+    SyncEngine self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as SyncEngineImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_DartFn_Inputs_bool_Output_String_AnyhowException(
+    FutureOr<String> Function(bool) self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_DartOpaque(
+      encode_DartFn_Inputs_bool_Output_String_AnyhowException(self),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_DartOpaque(Object self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_isize(
+      PlatformPointerUtil.ptrToPlatformInt64(
+        encodeDartOpaque(
+          self,
+          portManager.dartHandlerPort,
+          generalizedFrbRustBinding,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSyncEngine(
+    SyncEngine self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as SyncEngineImpl).frbInternalSseEncode(move: null),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_StreamSink_ffi_event_Sse(
+    RustStreamSink<FfiEvent> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_ffi_event,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_StreamSink_ffi_rows_Sse(
+    RustStreamSink<FfiRows> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_ffi_rows,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_StreamSink_ffi_status_Sse(
+    RustStreamSink<FfiStatus> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_ffi_status,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_StreamSink_list_String_Sse(
+    RustStreamSink<List<String>> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_String,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_String(String self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_prim_u_8_strict(utf8.encoder.convert(self), serializer);
+  }
+
+  @protected
+  void sse_encode_bool(bool self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint8(self ? 1 : 0);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_ffi_config(
+    FfiConfig self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_ffi_config(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_i_64(
+    PlatformInt64 self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_64(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self, serializer);
+  }
+
+  @protected
+  void sse_encode_f_64(double self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putFloat64(self);
+  }
+
+  @protected
+  void sse_encode_ffi_config(FfiConfig self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.dbPath, serializer);
+    sse_encode_String(self.manifestJson, serializer);
+    sse_encode_String(self.migrationsJson, serializer);
+    sse_encode_opt_String(self.defaultScope, serializer);
+    sse_encode_String(self.baseUrl, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.pullLimit, serializer);
+  }
+
+  @protected
+  void sse_encode_ffi_error(FfiError self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.code, serializer);
+    sse_encode_String(self.message, serializer);
+  }
+
+  @protected
+  void sse_encode_ffi_event(FfiEvent self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.kind, serializer);
+    sse_encode_opt_String(self.scope, serializer);
+    sse_encode_opt_String(self.table, serializer);
+    sse_encode_opt_String(self.id, serializer);
+    sse_encode_opt_String(self.code, serializer);
+    sse_encode_opt_String(self.message, serializer);
+    sse_encode_opt_box_autoadd_i_64(self.droppedChanges, serializer);
+    sse_encode_opt_box_autoadd_i_64(self.minSchemaVersion, serializer);
+  }
+
+  @protected
+  void sse_encode_ffi_report(FfiReport self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.pushed, serializer);
+    sse_encode_u_32(self.conflicts, serializer);
+    sse_encode_u_32(self.rejected, serializer);
+    sse_encode_u_32(self.pulled, serializer);
+    sse_encode_u_32(self.cycles, serializer);
+    sse_encode_bool(self.coalesced, serializer);
+  }
+
+  @protected
+  void sse_encode_ffi_rows(FfiRows self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_String(self.columns, serializer);
+    sse_encode_list_list_ffi_value(self.rows, serializer);
+  }
+
+  @protected
+  void sse_encode_ffi_statement(FfiStatement self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.sql, serializer);
+    sse_encode_list_ffi_value(self.params, serializer);
+  }
+
+  @protected
+  void sse_encode_ffi_status(FfiStatus self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.phase, serializer);
+    sse_encode_i_64(self.pendingChanges, serializer);
+    sse_encode_opt_box_autoadd_i_64(self.lastSyncAt, serializer);
+    sse_encode_opt_String(self.lastError, serializer);
+  }
+
+  @protected
+  void sse_encode_ffi_value(FfiValue self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    switch (self) {
+      case FfiValue_Null():
+        sse_encode_i_32(0, serializer);
+      case FfiValue_Integer(field0: final field0):
+        sse_encode_i_32(1, serializer);
+        sse_encode_i_64(field0, serializer);
+      case FfiValue_Real(field0: final field0):
+        sse_encode_i_32(2, serializer);
+        sse_encode_f_64(field0, serializer);
+      case FfiValue_Text(field0: final field0):
+        sse_encode_i_32(3, serializer);
+        sse_encode_String(field0, serializer);
+      case FfiValue_Blob(field0: final field0):
+        sse_encode_i_32(4, serializer);
+        sse_encode_list_prim_u_8_strict(field0, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putPlatformInt64(self);
+  }
+
+  @protected
+  void sse_encode_isize(PlatformInt64 self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putPlatformInt64(self);
+  }
+
+  @protected
+  void sse_encode_list_String(List<String> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_String(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_ffi_statement(
+    List<FfiStatement> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_ffi_statement(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_ffi_value(
+    List<FfiValue> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_ffi_value(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_list_ffi_value(
+    List<List<FfiValue>> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_list_ffi_value(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_prim_u_8_strict(
+    Uint8List self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    serializer.buffer.putUint8List(self);
+  }
+
+  @protected
+  void sse_encode_opt_String(String? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_String(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_i_64(
+    PlatformInt64? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_i_64(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_u_32(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_u_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint32(self);
+  }
+
+  @protected
+  void sse_encode_u_8(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint8(self);
+  }
+
+  @protected
+  void sse_encode_unit(void self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+  }
+
+  @protected
+  void sse_encode_usize(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putBigUint64(self);
+  }
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putInt32(self);
+  }
+}
+
+@sealed
+class SyncEngineImpl extends RustOpaque implements SyncEngine {
+  // Not to be used by end users
+  SyncEngineImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  SyncEngineImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative)
+    : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount:
+        RustLib.instance.api.rust_arc_increment_strong_count_SyncEngine,
+    rustArcDecrementStrongCount:
+        RustLib.instance.api.rust_arc_decrement_strong_count_SyncEngine,
+    rustArcDecrementStrongCountPtr:
+        RustLib.instance.api.rust_arc_decrement_strong_count_SyncEnginePtr,
+  );
+
+  /// Sync state as JSON, for support. Contains no record data.
+  Future<String> debugDump() =>
+      RustLib.instance.api.crateApiEngineSyncEngineDebugDump(that: this);
+
+  Future<String> deviceId() =>
+      RustLib.instance.api.crateApiEngineSyncEngineDeviceId(that: this);
+
+  /// Run a statement that changes data; returns the number of rows changed.
+  Future<PlatformInt64> execute({
+    required String sql,
+    required List<FfiValue> params,
+  }) => RustLib.instance.api.crateApiEngineSyncEngineExecute(
+    that: this,
+    sql: sql,
+    params: params,
+  );
+
+  /// A new record ID (UUIDv7).
+  String newId() =>
+      RustLib.instance.api.crateApiEngineSyncEngineNewId(that: this);
+
+  Future<FfiRows> query({
+    required String sql,
+    required List<FfiValue> params,
+  }) => RustLib.instance.api.crateApiEngineSyncEngineQuery(
+    that: this,
+    sql: sql,
+    params: params,
+  );
+
+  Future<void> signOut({required bool discardPending}) =>
+      RustLib.instance.api.crateApiEngineSyncEngineSignOut(
+        that: this,
+        discardPending: discardPending,
+      );
+
+  Future<FfiStatus> status() =>
+      RustLib.instance.api.crateApiEngineSyncEngineStatus(that: this);
+
+  /// Things to show the user, such as `change_rejected` and
+  /// `upgrade_required`. Use `eventStream` from Dart.
+  Stream<FfiEvent> subscribeEvents({required PlatformInt64 subscription}) =>
+      RustLib.instance.api.crateApiEngineSyncEngineSubscribeEvents(
+        that: this,
+        subscription: subscription,
+      );
+
+  /// Status changes. Use `statusStream` from Dart.
+  Stream<FfiStatus> subscribeStatus({required PlatformInt64 subscription}) =>
+      RustLib.instance.api.crateApiEngineSyncEngineSubscribeStatus(
+        that: this,
+        subscription: subscription,
+      );
+
+  /// Names of tables changed by local writes or by sync. Use
+  /// `tablesChangedStream` from Dart.
+  Stream<List<String>> subscribeTables({required PlatformInt64 subscription}) =>
+      RustLib.instance.api.crateApiEngineSyncEngineSubscribeTables(
+        that: this,
+        subscription: subscription,
+      );
+
+  /// Emits the query result now and again whenever a table it reads
+  /// changes. Use `watch` from Dart.
+  Stream<FfiRows> subscribeWatch({
+    required PlatformInt64 subscription,
+    required String sql,
+    required List<FfiValue> params,
+  }) => RustLib.instance.api.crateApiEngineSyncEngineSubscribeWatch(
+    that: this,
+    subscription: subscription,
+    sql: sql,
+    params: params,
+  );
+
+  Future<FfiReport> syncNow() =>
+      RustLib.instance.api.crateApiEngineSyncEngineSyncNow(that: this);
+
+  /// Close a stream opened with a `subscribe_*` function. Its Dart stream
+  /// then ends.
+  Future<void> unsubscribe({required PlatformInt64 subscription}) =>
+      RustLib.instance.api.crateApiEngineSyncEngineUnsubscribe(
+        that: this,
+        subscription: subscription,
+      );
+
+  /// Run several statements in one transaction.
+  Future<void> writeBatch({required List<FfiStatement> statements}) => RustLib
+      .instance
+      .api
+      .crateApiEngineSyncEngineWriteBatch(that: this, statements: statements);
+}
