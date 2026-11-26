@@ -76,6 +76,18 @@ pub struct Session {
     pub scopes: Vec<ScopeGrant>,
 }
 
+// ---------------------------------------------------------------- policy
+
+/// Conflict policy of a table (protocol section 6). Not sent on the wire;
+/// configured identically on the server and in the client manifest.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Policy {
+    #[default]
+    FieldMerge,
+    ServerWins,
+}
+
 // ---------------------------------------------------------------- records
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -1,14 +1,6 @@
 use serde::{Deserialize, Serialize};
+pub use sync_core::protocol::Policy;
 use sync_core::protocol::{Access, Limits, ScopeGrant};
-
-/// Conflict policy of a table (protocol section 6).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Policy {
-    #[default]
-    FieldMerge,
-    ServerWins,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TableConfig {
