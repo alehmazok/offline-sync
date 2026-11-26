@@ -58,11 +58,12 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: write
-    env:
-      LOGS: ${{ runner.temp }}/logs
     steps:
       - uses: actions/checkout@v4
-      - run: mkdir -p "$LOGS"
+      - name: Log folder
+        run: |
+          echo "LOGS=$RUNNER_TEMP/logs" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/logs"
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
@@ -161,11 +162,12 @@ jobs:
   ios:
     runs-on: macos-latest
     timeout-minutes: 60
-    env:
-      LOGS: ${{ runner.temp }}/logs
     steps:
       - uses: actions/checkout@v4
-      - run: mkdir -p "$LOGS"
+      - name: Log folder
+        run: |
+          echo "LOGS=$RUNNER_TEMP/logs" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/logs"
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
