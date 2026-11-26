@@ -267,3 +267,6 @@ components:
                 rate_limited
             message:
               type: string
+            min_schema_version:
+              type: integer
+              description: With upgrade_required, the oldest schema version still served.

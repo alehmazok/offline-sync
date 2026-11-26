@@ -301,3 +301,37 @@ The engine's logic is tested without devices or networks.
    has synced, all devices and the server must hold identical data, and no
    acknowledged change may be missing.
 4. **Integration tests** against the reference server over real HTTP.
+
+## 4.14 Implementation notes
+
+Where the code in `crates/sync-engine` differs from or adds to the design
+above:
+
+| Topic | Implementation |
+| --- | --- |
+| Threading | The engine is synchronous: every call blocks. No async runtime is used. Bindings call it from a background thread. Only one sync cycle runs at a time; a second request during a cycle returns at once and the running cycle does one more round. |
+| Connections | One SQLite connection behind a mutex, not a writer plus a read pool (section 4.3). Reads wait for a running write. A read pool can be added without changing the API. |
+| Downloads from the beginning | Every download that starts without a cursor ends like a resync: local rows of the scope that the server did not return, and that have no unsent changes, are removed. This also covers a first download after the device already uploaded rows. |
+| Writes to a read-only scope | Rejected on the device with code `read_only_scope`; the scope is downloaded again, which restores the rows. |
+| Writes to a scope not in the session | Rejected on the device with code `scope_forbidden`; the rows are removed. |
+| A single change too large for the server | Rejected with code `too_large`; the scope is downloaded again. A batch refused as too large is split in half and resent. |
+| Moved records | A record that reappears in another scope takes that scope; a tombstone from its old scope is ignored. The local scope column is updated. |
+| Value types | Synced columns may hold null, integers, reals and text. Blob values cannot be captured by the triggers; keep files out of sync. Columns listed in `json_columns` hold JSON text and sync as JSON values. |
+| Local-only columns | Must be nullable or have a default, because a record from the server is inserted with synced columns only. |
+| Engine tables | `execute` and `write_batch` refuse SQL that mentions `_sync_`. |
+| Resync events | `resync_finished` is sent only in the same cycle as its `resync_started`. |
+| Upgrade required | The server's 426 reply carries `min_schema_version`, passed on in the `upgrade_required` event. |
+| Default scope | Stored at open. To switch user, call `sign_out` and open with the new default scope. |
+| Logging | Through the `log` crate. `debug_dump` returns the sync state as JSON without record data. |
+
+### Public API as built
+
+The surface matches section 4.10, with these concrete forms:
+
+- `watch(sql, params, callback)` takes a callback and returns an ID for
+  `unwatch`. The callback runs with no engine lock held.
+- Status, events and table changes are delivered to listeners registered
+  with `add_listener`. The Flutter binding turns them into streams.
+- `crates/sync-ffi` is the binding-friendly version of the same API: plain
+  data types, manifest and migrations as JSON, and three callback traits
+  (token provider, listener, watcher).

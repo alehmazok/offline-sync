@@ -138,10 +138,54 @@ crate under `crates/` knows that Flutter exists.
 
 ## 6.5 Decisions needed before coding starts
 
-1. Confirm or correct the four assumptions in
-   [architecture section 1.7](01-architecture.md#17-assumptions-to-confirm).
-2. Which app goes first.
+1. ~~Confirm or correct the four assumptions in
+   [architecture section 1.7](01-architecture.md#17-assumptions).~~
+   Confirmed.
+2. Which app goes first. Open.
 3. For that app: its scopes, its synced tables, and which tables need
    `server_wins`.
-4. Whether existing local data on users' devices must be preserved through
-   the switch, or can be re-downloaded.
+4. ~~Whether existing local data on users' devices must be preserved
+   through the switch, or can be re-downloaded.~~ It can be re-downloaded.
+
+## 6.6 Progress
+
+| Phase | Status | Where |
+| --- | --- | --- |
+| 0. Foundations | Done | `crates/sync-core`, `crates/sync-refserver`, `crates/sync-conformance`, `.github/workflows/ci.yml` |
+| 1. Store | Done | `crates/sync-store` |
+| 2. Sync loop | Done | `crates/sync-net`, `crates/sync-engine` |
+| 3. Flutter binding | Written, not generated or run | `crates/sync-ffi` (tested), `bindings/flutter` |
+| 4. First real project | Not started; needs the choice of app | |
+| 5. Hardening | Done | `crates/sync-engine/tests/hardening.rs` |
+| 6. Remaining projects | Not started | |
+
+Phase 3 needs a machine with the Flutter SDK: run the steps in
+`bindings/flutter/README.md`, then build the package for iOS and Android
+and run a small app on two devices. The Rust adapter type-checks against
+flutter_rust_bridge 2.13.0; the Dart side has not been compiled.
+
+### Tests
+
+| Suite | What it covers | Command |
+| --- | --- | --- |
+| Unit tests | Protocol types, batch merging, client retry, store triggers and migrations | `cargo test --workspace` |
+| Conformance (44 tests) | The reference server against the protocol | `cargo test -p sync-conformance` |
+| Engine scenarios (19) | Two-device sync, conflicts, crashes at every point, watches | `cargo test -p sync-engine --test engine` |
+| Hardening (15) | Every failure case of section 4.8 of the engine design, scopes, sign-out, migrations, moves | `cargo test -p sync-engine --test hardening` |
+| Convergence | 25 random schedules with lost requests, lost responses and crashes | `cargo test -p sync-engine --test convergence` |
+| Convergence, long | 300 schedules, 4 devices, 400 steps each, release build, about 2 minutes | `cargo test -p sync-engine --release --test convergence -- --ignored` |
+
+A first download of 20,000 records from an in-process server takes about
+1.2 seconds on the development machine
+(`cargo test --release -p sync-engine --test hardening first_sync_timing -- --ignored --nocapture`).
+It has not been measured on a phone.
+
+### Problems the tests found
+
+| Found by | Problem | Fix |
+| --- | --- | --- |
+| C-OPT-01 | After tombstones were pruned, the cursor ending a full download could itself be expired, so a device would download forever | Caught-up cursors are the scope counter; download cursors stay valid until the next pruning (protocol 5.2, rules 9 and 10) |
+| Long convergence run, 9 of 300 seeds | A download from the beginning carries no tombstones, so a device that already held rows (its own uploads, an interrupted download) never learnt of their deletion | Every download from the beginning ends with resync cleanup (protocol 5.2, client rule 5) |
+| Hardening test | A write to a read-only scope was dropped but stayed on the device, because the re-download skipped the unchanged row | The row's version is forgotten when its change is dropped |
+| Review | A record moved between scopes could be skipped, since version numbers were compared across scopes, and its local scope column was never updated | Row versions are compared only within one scope; the engine may change the scope column |
+| Mutation check | Removing the step that rebases later edits after an upload went unnoticed by the random test | Added a test that edits a record while its previous edit is uploading |

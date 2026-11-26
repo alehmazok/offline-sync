@@ -209,8 +209,9 @@ HTTP 200 with one result per change, in the same order.
 | `rejected` | The server refuses this change permanently | `code`, `message`, `record` | Drops the change, takes `record` as the truth, tells the app |
 
 `record` is the server's current state of that record in the form of
-section 2.1, or `null` if the server has no such record. With it the client
-can repair its local copy immediately.
+section 2.1, or `null` if the server has no such record in this scope. A
+record of another scope is never revealed: with code `forbidden`, `record`
+is `null`. With it the client can repair its local copy immediately.
 
 `rejected` is final. The client MUST NOT resend a rejected change. Standard
 values of `code`:
@@ -268,7 +269,15 @@ Rules for the server:
    implies. It will then appear again in a later page, which is harmless.
 7. Whole records are returned, with every synced field, never partial ones.
 8. A pull from the beginning returns every live record of the scope.
-   Tombstones MAY be omitted in that case.
+   Tombstones MAY be omitted on the first page of such a download, and only
+   there: a record delivered on an earlier page may be deleted before a
+   later page is fetched.
+9. When `has_more` is `false`, the cursor covers every change number
+   assigned in the scope so far, even if the newest changes were
+   tombstones that have since been pruned. A device that is caught up must
+   never receive `cursor_expired`.
+10. A cursor issued during a download from the beginning stays valid until
+    tombstones are pruned again (section 5.3).
 
 Rules for the client:
 
@@ -277,6 +286,11 @@ Rules for the client:
 3. Ignore records of unknown tables and unknown fields in `data`.
 4. A device will receive its own pushed changes back in a later pull. This
    is expected.
+5. Treat every download from the beginning as a resync: when it finishes,
+   remove local rows of the scope the server did not return, unless they
+   have unsent changes. The device may already hold rows of the scope (its
+   own uploads, or an interrupted earlier download), and the download may
+   not carry their tombstones.
 
 ### 5.3 Expired cursors
 
@@ -336,7 +350,7 @@ A request that fails as a whole returns a non-2xx status and this body:
 | 409 | `schema_ahead` | The client's schema is newer than the server's | Wait and retry later; the backend is mid-deploy |
 | 410 | `cursor_expired` | See section 5.3 | Pull the scope from the beginning |
 | 413 | `too_large` | The batch exceeds a limit | Halve the batch and retry |
-| 426 | `upgrade_required` | The client's schema is older than `min_schema_version` | Stop syncing, keep the outbox, tell the app to update |
+| 426 | `upgrade_required` | The client's schema is older than `min_schema_version`. The error body SHOULD include `"min_schema_version"` | Stop syncing, keep the outbox, tell the app to update |
 | 429 | `rate_limited` | Too many requests | Retry after the `Retry-After` header |
 | 5xx | any | Server trouble | Retry with exponential backoff |
 

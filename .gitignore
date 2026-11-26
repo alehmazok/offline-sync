@@ -1,0 +1,7 @@
+target/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+bindings/flutter/rust/target/
+bindings/flutter/.dart_tool/
+bindings/flutter/build/

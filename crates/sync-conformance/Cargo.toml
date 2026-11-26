@@ -1,0 +1,16 @@
+[package]
+name = "sync-conformance"
+description = "Conformance test suite for sync protocol v1 servers. Talks HTTP only."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+sync-core.workspace = true
+serde_json.workspace = true
+ureq.workspace = true
+
+[dev-dependencies]
+sync-refserver.workspace = true

@@ -1,0 +1,24 @@
+name: offline_sync
+description: Offline-first data sync for Flutter, backed by a Rust engine.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Must be the exact version of the Rust crate in rust/Cargo.toml.
+  flutter_rust_bridge: 2.13.0
+  freezed_annotation: ^2.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  build_runner: ^2.4.0
+  freezed: ^2.5.0
+
+# `flutter_rust_bridge_codegen integrate` adds the native build setup
+# (rust_builder/ and its dependency entry) on first setup.

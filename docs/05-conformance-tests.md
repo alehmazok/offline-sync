@@ -109,7 +109,7 @@ These need a server-side test switch and are skipped when it is absent.
 
 | ID | Test | Needs | Expected | Req. |
 | --- | --- | --- | --- | --- |
-| C-OPT-01 | Pull with a cursor older than the pruned tombstones | A way to trigger tombstone pruning | 410 `cursor_expired`; a pull from the beginning returns every live record | R15 |
+| C-OPT-01 | Pull with a cursor older than the pruned tombstones; then download from the beginning in small pages | A way to trigger tombstone pruning | 410 `cursor_expired`; the download finishes, returns every live record, and its final cursor is accepted | R15 |
 | C-OPT-02 | Access to a scope is revoked between two requests | A way to change user B's access | The session no longer lists the scope; requests to it get 403 | R1, R2 |
 
 ## 5.8 Running it
@@ -124,4 +124,25 @@ sync-conformance \
 
 The program prints one line per test and exits non-zero on any failure, so
 it can run in each backend's CI. The reference server in this repository
-must always pass it; that is how the suite itself is tested.
+must always pass it; that is how the suite itself is tested
+(`cargo test -p sync-conformance`).
+
+## 5.9 Implementation
+
+`crates/sync-conformance` implements all 44 tests above, in the order
+listed, with the optional tests last because pruning invalidates old
+cursors. Build it with `cargo build --release -p sync-conformance`; the
+binary is `target/release/sync-conformance`.
+
+The reference server's test hooks, enabled only by `test_hooks: true` in
+its configuration, are:
+
+| Hook | Body | Effect |
+| --- | --- | --- |
+| `POST /_test/prune` | `{}` | Remove every tombstone and advance each scope's `min_seq` |
+| `POST /_test/access` | `{"token", "scope", "access"}` | Grant, change or (with `null`) revoke access |
+| `POST /_test/write` | `{"scope", "table", "id", "fields"}` | A server-side write; `fields: null` deletes |
+| `GET /_test/dump?scope=` | | Every live record of a scope |
+
+A backend in another stack needs only the first two to run the optional
+tests.

@@ -1,0 +1,16 @@
+[package]
+name = "sync-refserver"
+description = "Reference server for sync protocol v1, used in tests and as an executable version of the server guide."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+sync-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+rusqlite.workspace = true
+tiny_http.workspace = true
+log.workspace = true

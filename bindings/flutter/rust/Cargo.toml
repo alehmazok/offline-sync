@@ -1,0 +1,22 @@
+[package]
+name = "offline_sync_flutter"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Built by the Flutter tooling (cargokit) for each target; not part of the
+# main workspace because `src/frb_generated.rs` exists only after running
+# `flutter_rust_bridge_codegen generate`.
+[workspace]
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+sync-ffi = { path = "../../../crates/sync-ffi" }
+# Must be the exact version of the Dart package in ../pubspec.yaml.
+flutter_rust_bridge = "=2.13.0"
+futures = { version = "0.3", default-features = false, features = ["executor"] }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(frb_expand)"] }
