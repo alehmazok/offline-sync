@@ -66,4 +66,6 @@ With the server running (step 1):
 flutter test integration_test -d <device>
 ```
 
-CI runs it on an Android emulator and an iOS simulator.
+CI runs it on an Android emulator. On iOS, CI builds the app with
+`--dart-define=SMOKE=true`, which makes it write and sync a note at start,
+and checks that the note reached the server.

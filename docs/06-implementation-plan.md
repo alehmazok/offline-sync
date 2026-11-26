@@ -154,20 +154,33 @@ crate under `crates/` knows that Flutter exists.
 | 0. Foundations | Done | `crates/sync-core`, `crates/sync-refserver`, `crates/sync-conformance`, `.github/workflows/ci.yml` |
 | 1. Store | Done | `crates/sync-store` |
 | 2. Sync loop | Done | `crates/sync-net`, `crates/sync-engine` |
-| 3. Flutter binding | Written, not generated or run | `crates/sync-ffi` (tested), `bindings/flutter` |
+| 3. Flutter binding | Done on emulators and simulators; not yet run on physical phones | `crates/sync-ffi`, `bindings/flutter`, `bindings/flutter/example` |
 | 4. First real project | Not started; needs the choice of app | |
 | 5. Hardening | Done | `crates/sync-engine/tests/hardening.rs` |
 | 6. Remaining projects | Not started | |
 
-Phase 3 needs a machine with the Flutter SDK: run the steps in
-`bindings/flutter/README.md`, then build the package for iOS and Android
-and run a small app on two devices. The Rust adapter type-checks against
-flutter_rust_bridge 2.13.0; the Dart side has not been compiled.
+Phase 3 in CI (`.github/workflows/ci.yml`): the bindings are regenerated
+on every push; the Dart package and the example app pass `flutter analyze`;
+the example builds for Android (debug APK) and the iOS simulator. On an
+Android emulator (API 34) the end-to-end test
+(`bindings/flutter/example/integration_test/sync_test.dart`) passes:
+two engines in one app sync through `sync-refserver` over HTTP, merge
+offline edits to different fields, propagate deletes, call the Dart token
+callback (and fail with `unauthorized` when it returns no token), deliver
+watch, status and event streams, and cancel streams promptly. On the iOS
+simulator, CI launches the example, which writes a note and syncs it, and
+finds the note on the server. `flutter test` itself cannot attach to the
+app on hosted macOS runners, so the full test has not passed on iOS yet.
+
+Not done yet: running the example on two physical phones, and the
+first-sync timing on a low-end phone (both need hardware).
 
 ### Tests
 
 | Suite | What it covers | Command |
 | --- | --- | --- |
+| Flutter adapter (3) | Stream registration bookkeeping; the example's sync setup through two engines over HTTP | `cargo test --manifest-path bindings/flutter/rust/Cargo.toml` |
+| Flutter end-to-end (8) | The binding on a device against `sync-refserver` | `flutter test integration_test` in `bindings/flutter/example` (see its README) |
 | Unit tests | Protocol types, batch merging, client retry, store triggers and migrations | `cargo test --workspace` |
 | Conformance (44 tests) | The reference server against the protocol | `cargo test -p sync-conformance` |
 | Engine scenarios (19) | Two-device sync, conflicts, crashes at every point, watches | `cargo test -p sync-engine --test engine` |
@@ -189,3 +202,6 @@ It has not been measured on a phone.
 | Hardening test | A write to a read-only scope was dropped but stayed on the device, because the re-download skipped the unchanged row | The row's version is forgotten when its change is dropped |
 | Review | A record moved between scopes could be skipped, since version numbers were compared across scopes, and its local scope column was never updated | Row versions are compared only within one scope; the engine may change the scope column |
 | Mutation check | Removing the step that rebases later edits after an upload went unnoticed by the random test | Added a test that edits a record while its previous edit is uploading |
+| Generating the binding | The adapter's private helper types sat in the generator's input and were exported to Dart, where the generated code did not compile | Helpers moved to `bindings/flutter/rust/src/adapter.rs`, outside `crate::api` |
+| Review of the generated API | Stream functions return a Dart `Stream`, so the registration ID never reached Dart and a cancelled stream stayed registered forever | Superseded by the next row |
+| Android integration test | `await subscription.cancel()` on a watch or status stream never completed: a bridge stream only finishes cancelling when Rust sends to it again or drops its sink | Streams get an ID from Dart; cancel calls `unsubscribe`, which drops the sink and ends the stream (`lib/src/streams.dart`). Tests require cancel within 5 s |

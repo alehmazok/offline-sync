@@ -10,10 +10,13 @@ Needs Flutter 3.35 or newer (Dart 3.9.2, required by flutter_rust_bridge
 2.13) and a Rust toolchain from rustup.
 
 > **Status.** The bindings are generated and committed. CI builds the
-> example app for Android and the iOS simulator and runs the end-to-end
-> test (`example/integration_test`) on an Android emulator and an iOS
-> simulator against `sync-refserver`. It has not yet been run on physical
-> phones. See `docs/06-implementation-plan.md`, section 6.6.
+> example app for Android and the iOS simulator. On an Android emulator
+> the end-to-end test (`example/integration_test`) passes against
+> `sync-refserver`. On the iOS simulator CI launches the example, which
+> writes a note and syncs it, and finds the note on the server; the full
+> test does not run there yet, because `flutter test` cannot attach to
+> the app on hosted macOS runners. Not yet run on physical phones. See
+> `docs/06-implementation-plan.md`, section 6.6.
 
 ## Layout
 
