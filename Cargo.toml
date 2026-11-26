@@ -7,7 +7,9 @@ members = [
     "crates/sync-engine",
     "crates/sync-refserver",
     "crates/sync-conformance",
+    "crates/sync-ffi",
 ]
+exclude = ["bindings/flutter/rust"]
 
 [workspace.package]
 version = "0.1.0"
@@ -32,6 +34,7 @@ sync-net = { path = "crates/sync-net" }
 sync-engine = { path = "crates/sync-engine" }
 sync-refserver = { path = "crates/sync-refserver" }
 sync-conformance = { path = "crates/sync-conformance" }
+sync-ffi = { path = "crates/sync-ffi" }
 
 [profile.dev.package."*"]
 opt-level = 1

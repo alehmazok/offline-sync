@@ -624,6 +624,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "sync-ffi"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "sync-core",
+ "sync-engine",
+ "sync-refserver",
+]
+
+[[package]]
 name = "sync-net"
 version = "0.1.0"
 dependencies = [
