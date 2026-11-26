@@ -13,6 +13,7 @@ mod value;
 
 pub use manifest::{DefaultScope, Manifest, ScopeRule, TableSpec};
 pub use migrate::{Migration, OutboxRewrite};
+pub use rusqlite;
 pub use value::{json_to_sql, QueryResult, SqlValue};
 
 use rusqlite::functions::FunctionFlags;
@@ -49,11 +50,18 @@ pub struct Store {
 impl Store {
     /// Open or create the database at `path` (`":memory:"` for tests), run
     /// pending migrations and install triggers for `manifest`.
-    pub fn open(path: &str, manifest: Manifest, migrations: &[Migration], default_scope: Option<&str>) -> Result<Store> {
+    pub fn open(
+        path: &str,
+        manifest: Manifest,
+        migrations: &[Migration],
+        default_scope: Option<&str>,
+    ) -> Result<Store> {
         manifest.validate()?;
         migrate::validate(migrations)?;
         if manifest.uses_default_scope() && default_scope.is_none() {
-            return Err(StoreError::Manifest("a table uses the default scope but none is configured".into()));
+            return Err(StoreError::Manifest(
+                "a table uses the default scope but none is configured".into(),
+            ));
         }
         if let Some(s) = default_scope {
             if !sync_core::is_valid_scope_id(s) {
@@ -72,11 +80,16 @@ impl Store {
         let capture = Arc::new(AtomicBool::new(true));
         {
             let capture = capture.clone();
-            conn.create_scalar_function("sync_capture", 0, FunctionFlags::SQLITE_UTF8, move |_| {
-                Ok(capture.load(Ordering::SeqCst) as i64)
-            })?;
+            conn.create_scalar_function(
+                "sync_capture",
+                0,
+                FunctionFlags::SQLITE_UTF8,
+                move |_| Ok(capture.load(Ordering::SeqCst) as i64),
+            )?;
         }
-        conn.create_scalar_function("sync_new_id", 0, FunctionFlags::SQLITE_UTF8, |_| Ok(sync_core::new_id()))?;
+        conn.create_scalar_function("sync_new_id", 0, FunctionFlags::SQLITE_UTF8, |_| {
+            Ok(sync_core::new_id())
+        })?;
         conn.execute_batch(state::SCHEMA)?;
 
         let mut store = Store {
@@ -96,7 +109,13 @@ impl Store {
             }
             // Triggers can block schema changes to the columns they use, so
             // they are removed while migrations run and installed after.
-            triggers::install(tx, &Manifest { schema_version: 0, tables: vec![] })?;
+            triggers::install(
+                tx,
+                &Manifest {
+                    schema_version: 0,
+                    tables: vec![],
+                },
+            )?;
             let n = migrate::apply(tx, migrations)?;
             if n > 0 {
                 log::info!("applied {n} local migration(s)");
@@ -107,11 +126,13 @@ impl Store {
         triggers::install(&store.conn, &store.manifest)?;
 
         let changed = store.changed.clone();
-        store.conn.update_hook(Some(move |_action, _db: &str, table: &str, _rowid| {
-            if !table.starts_with("_sync_") && !table.starts_with("sqlite_") {
-                changed.lock().unwrap().insert(table.to_string());
-            }
-        }))?;
+        store
+            .conn
+            .update_hook(Some(move |_action, _db: &str, table: &str, _rowid| {
+                if !table.starts_with("_sync_") && !table.starts_with("sqlite_") {
+                    changed.lock().unwrap().insert(table.to_string());
+                }
+            }))?;
         // Writes made while opening (migrations) do not count as changes.
         store.changed.lock().unwrap().clear();
         Ok(store)
@@ -161,7 +182,9 @@ impl Store {
         let n = columns.len();
         let rows = stmt
             .query_map(params_from_iter(params.iter()), |r| {
-                (0..n).map(|i| r.get::<_, SqlValue>(i)).collect::<rusqlite::Result<Vec<_>>>()
+                (0..n)
+                    .map(|i| r.get::<_, SqlValue>(i))
+                    .collect::<rusqlite::Result<Vec<_>>>()
             })?
             .collect::<rusqlite::Result<Vec<_>>>()?;
         Ok(QueryResult { columns, rows })
@@ -182,7 +205,8 @@ impl Store {
             }))?;
         }
         let prepared = self.conn.prepare(sql).map(|_| ());
-        self.conn.authorizer(None::<fn(AuthContext<'_>) -> Authorization>)?;
+        self.conn
+            .authorizer(None::<fn(AuthContext<'_>) -> Authorization>)?;
         prepared?;
         let out = tables.lock().unwrap().clone();
         Ok(out)
@@ -195,7 +219,9 @@ impl Store {
 
     fn check_not_internal(&self, sql: &str) -> Result<()> {
         if sql.to_ascii_lowercase().contains("_sync_") {
-            return Err(StoreError::Invalid("statements must not touch the engine's _sync_ tables".into()));
+            return Err(StoreError::Invalid(
+                "statements must not touch the engine's _sync_ tables".into(),
+            ));
         }
         Ok(())
     }
@@ -205,11 +231,19 @@ impl Store {
     /// Run `f` in a transaction with change capture off. Used for every
     /// write of data that came from the server.
     pub fn with_capture_off<T>(&mut self, f: impl FnOnce(&Transaction) -> Result<T>) -> Result<T> {
+        self.capture_off(f)
+    }
+
+    /// [`Store::with_capture_off`] for callers with their own error type.
+    pub fn capture_off<T, E: From<StoreError>>(
+        &mut self,
+        f: impl FnOnce(&Transaction) -> std::result::Result<T, E>,
+    ) -> std::result::Result<T, E> {
         self.capture.store(false, Ordering::SeqCst);
         let result = (|| {
-            let tx = self.conn.transaction()?;
+            let tx = self.conn.transaction().map_err(StoreError::from)?;
             let v = f(&tx)?;
-            tx.commit()?;
+            tx.commit().map_err(StoreError::from)?;
             Ok(v)
         })();
         self.capture.store(true, Ordering::SeqCst);
@@ -230,7 +264,13 @@ impl Store {
 /// Write a record received from the server into its local table. Only the
 /// synced columns present in `data` are written; local-only columns are
 /// left alone.
-pub fn write_record(conn: &Connection, spec: &TableSpec, scope: &str, id: &str, data: &Fields) -> Result<()> {
+pub fn write_record(
+    conn: &Connection,
+    spec: &TableSpec,
+    scope: &str,
+    id: &str,
+    data: &Fields,
+) -> Result<()> {
     let mut cols = vec!["id".to_string()];
     let mut vals = vec![SqlValue::Text(id.to_string())];
     if let Some(sc) = spec.scope.column() {
@@ -276,13 +316,21 @@ pub fn update_fields(conn: &Connection, spec: &TableSpec, id: &str, fields: &Fie
         return Ok(());
     }
     vals.push(SqlValue::Text(id.to_string()));
-    let sql = format!("UPDATE \"{}\" SET {} WHERE id = ?{}", spec.name, sets.join(", "), vals.len());
+    let sql = format!(
+        "UPDATE \"{}\" SET {} WHERE id = ?{}",
+        spec.name,
+        sets.join(", "),
+        vals.len()
+    );
     conn.execute(&sql, params_from_iter(vals.iter()))?;
     Ok(())
 }
 
 pub fn delete_row(conn: &Connection, spec: &TableSpec, id: &str) -> Result<()> {
-    conn.execute(&format!("DELETE FROM \"{}\" WHERE id = ?1", spec.name), [id])?;
+    conn.execute(
+        &format!("DELETE FROM \"{}\" WHERE id = ?1", spec.name),
+        [id],
+    )?;
     Ok(())
 }
 
@@ -293,11 +341,19 @@ pub fn row_exists(conn: &Connection, spec: &TableSpec, id: &str) -> Result<bool>
 }
 
 /// Delete every local row of `scope` in every synced table.
-pub fn delete_scope_rows(conn: &Connection, manifest: &Manifest, scope: &str, default_scope: Option<&str>) -> Result<()> {
+pub fn delete_scope_rows(
+    conn: &Connection,
+    manifest: &Manifest,
+    scope: &str,
+    default_scope: Option<&str>,
+) -> Result<()> {
     for t in &manifest.tables {
         match t.scope.column() {
             Some(c) => {
-                conn.execute(&format!("DELETE FROM \"{}\" WHERE \"{c}\" = ?1", t.name), [scope])?;
+                conn.execute(
+                    &format!("DELETE FROM \"{}\" WHERE \"{c}\" = ?1", t.name),
+                    [scope],
+                )?;
             }
             None if default_scope == Some(scope) => {
                 conn.execute(&format!("DELETE FROM \"{}\"", t.name), [])?;

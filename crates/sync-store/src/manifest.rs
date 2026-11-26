@@ -53,7 +53,8 @@ impl ScopeRule {
 
 impl Manifest {
     pub fn from_json(text: &str) -> Result<Manifest, StoreError> {
-        serde_json::from_str(text).map_err(|e| StoreError::Manifest(format!("invalid manifest: {e}")))
+        serde_json::from_str(text)
+            .map_err(|e| StoreError::Manifest(format!("invalid manifest: {e}")))
     }
 
     pub fn table(&self, name: &str) -> Option<&TableSpec> {
@@ -81,10 +82,16 @@ impl Manifest {
                     return err(format!("{}: invalid column name {c:?}", t.name));
                 }
                 if c == "id" {
-                    return err(format!("{}: `id` is implicit and must not be listed", t.name));
+                    return err(format!(
+                        "{}: `id` is implicit and must not be listed",
+                        t.name
+                    ));
                 }
                 if Some(c.as_str()) == t.scope.column() {
-                    return err(format!("{}: the scope column must not be listed as a synced column", t.name));
+                    return err(format!(
+                        "{}: the scope column must not be listed as a synced column",
+                        t.name
+                    ));
                 }
                 if !cols.insert(c) {
                     return err(format!("{}: column {c} listed twice", t.name));
@@ -92,7 +99,10 @@ impl Manifest {
             }
             for c in &t.json_columns {
                 if !t.columns.contains(c) {
-                    return err(format!("{}: json column {c} is not a synced column", t.name));
+                    return err(format!(
+                        "{}: json column {c} is not a synced column",
+                        t.name
+                    ));
                 }
             }
         }
@@ -107,16 +117,29 @@ impl Manifest {
                 .query_map([], |r| Ok((r.get::<_, String>(1)?, r.get::<_, i64>(5)?)))?
                 .collect::<Result<_, _>>()?;
             if cols.is_empty() {
-                return Err(StoreError::Manifest(format!("table {} does not exist; create it in a migration", t.name)));
+                return Err(StoreError::Manifest(format!(
+                    "table {} does not exist; create it in a migration",
+                    t.name
+                )));
             }
-            let pk: Vec<&str> = cols.iter().filter(|(_, pk)| *pk > 0).map(|(n, _)| n.as_str()).collect();
+            let pk: Vec<&str> = cols
+                .iter()
+                .filter(|(_, pk)| *pk > 0)
+                .map(|(n, _)| n.as_str())
+                .collect();
             if pk != ["id"] {
-                return Err(StoreError::Manifest(format!("{}: the primary key must be a single column named id", t.name)));
+                return Err(StoreError::Manifest(format!(
+                    "{}: the primary key must be a single column named id",
+                    t.name
+                )));
             }
             let names: Vec<&str> = cols.iter().map(|(n, _)| n.as_str()).collect();
             for c in t.columns.iter().map(String::as_str).chain(t.scope.column()) {
                 if !names.contains(&c) {
-                    return Err(StoreError::Manifest(format!("{}: column {c} does not exist", t.name)));
+                    return Err(StoreError::Manifest(format!(
+                        "{}: column {c} does not exist",
+                        t.name
+                    )));
                 }
             }
         }

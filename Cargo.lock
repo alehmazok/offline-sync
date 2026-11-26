@@ -612,10 +612,28 @@ dependencies = [
 [[package]]
 name = "sync-engine"
 version = "0.1.0"
+dependencies = [
+ "log",
+ "serde",
+ "serde_json",
+ "sync-core",
+ "sync-net",
+ "sync-refserver",
+ "sync-store",
+ "thiserror",
+]
 
 [[package]]
 name = "sync-net"
 version = "0.1.0"
+dependencies = [
+ "log",
+ "serde",
+ "serde_json",
+ "sync-core",
+ "thiserror",
+ "ureq",
+]
 
 [[package]]
 name = "sync-refserver"

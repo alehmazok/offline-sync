@@ -25,7 +25,13 @@ fn manifest() -> Manifest {
 }
 
 fn open() -> Store {
-    Store::open(":memory:", manifest(), &[Migration::sql(1, SCHEMA)], Some("user:1")).unwrap()
+    Store::open(
+        ":memory:",
+        manifest(),
+        &[Migration::sql(1, SCHEMA)],
+        Some("user:1"),
+    )
+    .unwrap()
 }
 
 fn entries(s: &Store) -> Vec<sync_core::batch::OutboxEntry> {
@@ -51,31 +57,56 @@ fn insert_captures_all_synced_columns() {
     assert_eq!(e[0].table, "visits");
     assert_eq!(e[0].row_id, "v1");
     assert_eq!(e[0].base_version, None);
-    assert_eq!(serde_json::Value::Object(e[0].fields.clone()), json!({"note": "hi", "qty": 3, "meta": {"a": [1, 2]}}));
+    assert_eq!(
+        serde_json::Value::Object(e[0].fields.clone()),
+        json!({"note": "hi", "qty": 3, "meta": {"a": [1, 2]}})
+    );
     assert_eq!(e[0].change_id.len(), 36);
 }
 
 #[test]
 fn update_captures_only_changed_synced_columns() {
     let s = open();
-    s.execute("INSERT INTO visits (id, scope_id, note, qty) VALUES ('v1', 'team:1', 'a', 1)", &[]).unwrap();
-    s.execute("UPDATE visits SET qty = 2, local_flag = 9 WHERE id = 'v1'", &[]).unwrap();
-    s.execute("UPDATE visits SET local_flag = 10 WHERE id = 'v1'", &[]).unwrap();
-    s.execute("UPDATE visits SET note = 'a' WHERE id = 'v1'", &[]).unwrap();
-    s.execute("UPDATE visits SET note = NULL WHERE id = 'v1'", &[]).unwrap();
+    s.execute(
+        "INSERT INTO visits (id, scope_id, note, qty) VALUES ('v1', 'team:1', 'a', 1)",
+        &[],
+    )
+    .unwrap();
+    s.execute(
+        "UPDATE visits SET qty = 2, local_flag = 9 WHERE id = 'v1'",
+        &[],
+    )
+    .unwrap();
+    s.execute("UPDATE visits SET local_flag = 10 WHERE id = 'v1'", &[])
+        .unwrap();
+    s.execute("UPDATE visits SET note = 'a' WHERE id = 'v1'", &[])
+        .unwrap();
+    s.execute("UPDATE visits SET note = NULL WHERE id = 'v1'", &[])
+        .unwrap();
     let e = entries(&s);
     assert_eq!(e.len(), 3, "{e:?}");
-    assert_eq!(serde_json::Value::Object(e[1].fields.clone()), json!({"qty": 2}));
-    assert_eq!(serde_json::Value::Object(e[2].fields.clone()), json!({"note": null}));
+    assert_eq!(
+        serde_json::Value::Object(e[1].fields.clone()),
+        json!({"qty": 2})
+    );
+    assert_eq!(
+        serde_json::Value::Object(e[2].fields.clone()),
+        json!({"note": null})
+    );
 }
 
 #[test]
 fn delete_is_captured_with_base_version() {
     let s = open();
-    s.execute("INSERT INTO visits (id, scope_id) VALUES ('v1', 'team:1')", &[]).unwrap();
+    s.execute(
+        "INSERT INTO visits (id, scope_id) VALUES ('v1', 'team:1')",
+        &[],
+    )
+    .unwrap();
     state::set_pulled(s.conn(), "visits", "v1", "team:1", 41, 0).unwrap();
     state::set_known(s.conn(), "visits", "v1", "team:1", 45).unwrap();
-    s.execute("DELETE FROM visits WHERE id = 'v1'", &[]).unwrap();
+    s.execute("DELETE FROM visits WHERE id = 'v1'", &[])
+        .unwrap();
     let e = entries(&s);
     assert_eq!(e[1].op, Op::Delete);
     assert_eq!(e[1].base_version, Some(45));
@@ -85,7 +116,11 @@ fn delete_is_captured_with_base_version() {
 #[test]
 fn default_scope_tables_use_the_configured_scope() {
     let s = open();
-    s.execute("INSERT INTO settings (id, theme) VALUES ('me', 'dark')", &[]).unwrap();
+    s.execute(
+        "INSERT INTO settings (id, theme) VALUES ('me', 'dark')",
+        &[],
+    )
+    .unwrap();
     assert_eq!(entries(&s)[0].scope, "user:1");
 }
 
@@ -93,7 +128,10 @@ fn default_scope_tables_use_the_configured_scope() {
 fn capture_off_records_nothing() {
     let mut s = open();
     s.with_capture_off(|tx| {
-        tx.execute("INSERT INTO visits (id, scope_id, note) VALUES ('v1', 'team:1', 'x')", [])?;
+        tx.execute(
+            "INSERT INTO visits (id, scope_id, note) VALUES ('v1', 'team:1', 'x')",
+            [],
+        )?;
         Ok(())
     })
     .unwrap();
@@ -105,22 +143,37 @@ fn capture_off_records_nothing() {
 #[test]
 fn guards_reject_missing_scope_and_identity_changes() {
     let s = open();
-    assert!(s.execute("INSERT INTO visits (id, note) VALUES ('v1', 'x')", &[]).is_err());
-    s.execute("INSERT INTO visits (id, scope_id) VALUES ('v1', 'team:1')", &[]).unwrap();
+    assert!(s
+        .execute("INSERT INTO visits (id, note) VALUES ('v1', 'x')", &[])
+        .is_err());
+    s.execute(
+        "INSERT INTO visits (id, scope_id) VALUES ('v1', 'team:1')",
+        &[],
+    )
+    .unwrap();
     assert!(s.execute("UPDATE visits SET id = 'v2'", &[]).is_err());
-    assert!(s.execute("UPDATE visits SET scope_id = 'team:2'", &[]).is_err());
+    assert!(s
+        .execute("UPDATE visits SET scope_id = 'team:2'", &[])
+        .is_err());
 }
 
 #[test]
 fn batch_writes_are_atomic() {
     let mut s = open();
     let r = s.write_batch(&[
-        ("INSERT INTO visits (id, scope_id) VALUES (?1, ?2)".into(), vec![t("v1"), t("team:1")]),
+        (
+            "INSERT INTO visits (id, scope_id) VALUES (?1, ?2)".into(),
+            vec![t("v1"), t("team:1")],
+        ),
         ("INSERT INTO nowhere VALUES (1)".into(), vec![]),
     ]);
     assert!(r.is_err());
     assert!(entries(&s).is_empty());
-    assert!(s.query("SELECT * FROM visits", &[]).unwrap().rows.is_empty());
+    assert!(s
+        .query("SELECT * FROM visits", &[])
+        .unwrap()
+        .rows
+        .is_empty());
 }
 
 #[test]
@@ -132,32 +185,69 @@ fn engine_tables_are_off_limits() {
 #[test]
 fn server_records_keep_local_only_columns() {
     let mut s = open();
-    s.execute("INSERT INTO visits (id, scope_id, note, local_flag) VALUES ('v1', 'team:1', 'a', 7)", &[]).unwrap();
+    s.execute(
+        "INSERT INTO visits (id, scope_id, note, local_flag) VALUES ('v1', 'team:1', 'a', 7)",
+        &[],
+    )
+    .unwrap();
     let spec = s.manifest().table("visits").unwrap().clone();
     s.with_capture_off(|tx| {
         let data = json!({"note": "from server", "qty": 5, "meta": {"k": true}, "unknown": 1});
         write_record(tx, &spec, "team:1", "v1", data.as_object().unwrap())?;
-        write_record(tx, &spec, "team:1", "v2", json!({"note": "new"}).as_object().unwrap())?;
+        write_record(
+            tx,
+            &spec,
+            "team:1",
+            "v2",
+            json!({"note": "new"}).as_object().unwrap(),
+        )?;
         Ok(())
     })
     .unwrap();
-    let r = s.query("SELECT id, note, qty, meta, local_flag FROM visits ORDER BY id", &[]).unwrap();
+    let r = s
+        .query(
+            "SELECT id, note, qty, meta, local_flag FROM visits ORDER BY id",
+            &[],
+        )
+        .unwrap();
     assert_eq!(
         r.rows[0],
-        vec![t("v1"), t("from server"), SqlValue::Integer(5), t("{\"k\":true}"), SqlValue::Integer(7)]
+        vec![
+            t("v1"),
+            t("from server"),
+            SqlValue::Integer(5),
+            t("{\"k\":true}"),
+            SqlValue::Integer(7)
+        ]
     );
     assert_eq!(r.rows[1][1], t("new"));
-    assert_eq!(entries(&s).len(), 1, "only the app's own insert is captured");
+    assert_eq!(
+        entries(&s).len(),
+        1,
+        "only the app's own insert is captured"
+    );
 }
 
 #[test]
 fn changed_tables_and_read_tables() {
     let mut s = open();
-    s.execute("INSERT INTO visits (id, scope_id) VALUES ('v1', 'team:1')", &[]).unwrap();
-    assert_eq!(s.take_changed_tables().into_iter().collect::<Vec<_>>(), vec!["visits"]);
+    s.execute(
+        "INSERT INTO visits (id, scope_id) VALUES ('v1', 'team:1')",
+        &[],
+    )
+    .unwrap();
+    assert_eq!(
+        s.take_changed_tables().into_iter().collect::<Vec<_>>(),
+        vec!["visits"]
+    );
     assert!(s.take_changed_tables().is_empty());
-    let read = s.tables_read_by("SELECT v.note, s.theme FROM visits v JOIN settings s ON 1").unwrap();
-    assert_eq!(read.into_iter().collect::<Vec<_>>(), vec!["settings", "visits"]);
+    let read = s
+        .tables_read_by("SELECT v.note, s.theme FROM visits v JOIN settings s ON 1")
+        .unwrap();
+    assert_eq!(
+        read.into_iter().collect::<Vec<_>>(),
+        vec!["settings", "visits"]
+    );
 }
 
 #[test]
@@ -171,10 +261,19 @@ fn manifest_is_checked_against_tables() {
     let mig = [Migration::sql(1, SCHEMA)];
     assert!(Store::open(":memory:", m(r#"["note"]"#), &mig, None).is_ok());
     assert!(Store::open(":memory:", m(r#"["missing"]"#), &mig, None).is_err());
-    assert!(Store::open(":memory:", m(r#"["note"]"#), &[], None).is_err(), "table does not exist");
-    let bad_pk = [Migration::sql(1, "CREATE TABLE visits (rowid_pk INTEGER PRIMARY KEY, id TEXT, scope_id TEXT, note TEXT)")];
+    assert!(
+        Store::open(":memory:", m(r#"["note"]"#), &[], None).is_err(),
+        "table does not exist"
+    );
+    let bad_pk = [Migration::sql(
+        1,
+        "CREATE TABLE visits (rowid_pk INTEGER PRIMARY KEY, id TEXT, scope_id TEXT, note TEXT)",
+    )];
     assert!(Store::open(":memory:", m(r#"["note"]"#), &bad_pk, None).is_err());
-    assert!(Store::open(":memory:", manifest(), &mig, None).is_err(), "default scope required");
+    assert!(
+        Store::open(":memory:", manifest(), &mig, None).is_err(),
+        "default scope required"
+    );
 }
 
 #[test]
@@ -187,11 +286,24 @@ fn migrations_run_once_and_rewrite_unsent_changes() {
     let v1 = vec![Migration::sql(1, SCHEMA)];
     {
         let s = Store::open(path, manifest(), &v1, Some("user:1")).unwrap();
-        s.execute("INSERT INTO visits (id, scope_id, note, qty) VALUES ('new', 'team:1', 'n', 1)", &[]).unwrap();
+        s.execute(
+            "INSERT INTO visits (id, scope_id, note, qty) VALUES ('new', 'team:1', 'n', 1)",
+            &[],
+        )
+        .unwrap();
         state::set_pulled(s.conn(), "visits", "old", "team:1", 5, 0).unwrap();
-        s.execute("INSERT INTO visits (id, scope_id, note, qty) VALUES ('old', 'team:1', 'o', 1)", &[]).unwrap();
-        s.execute("UPDATE visits SET qty = 2 WHERE id = 'old'", &[]).unwrap();
-        s.execute("INSERT INTO settings (id, theme) VALUES ('me', 'dark')", &[]).unwrap();
+        s.execute(
+            "INSERT INTO visits (id, scope_id, note, qty) VALUES ('old', 'team:1', 'o', 1)",
+            &[],
+        )
+        .unwrap();
+        s.execute("UPDATE visits SET qty = 2 WHERE id = 'old'", &[])
+            .unwrap();
+        s.execute(
+            "INSERT INTO settings (id, theme) VALUES ('me', 'dark')",
+            &[],
+        )
+        .unwrap();
     }
 
     // Version 2: `note` becomes `comment`, `qty` is dropped, `settings` goes.
@@ -209,14 +321,30 @@ fn migrations_run_once_and_rewrite_unsent_changes() {
              ALTER TABLE visits DROP COLUMN qty;
              DROP TABLE settings;",
         )
-        .with(OutboxRewrite::RenameColumn { table: "visits".into(), from: "note".into(), to: "comment".into() })
-        .with(OutboxRewrite::DropColumn { table: "visits".into(), column: "qty".into() })
-        .with(OutboxRewrite::DropTable { table: "settings".into() }),
+        .with(OutboxRewrite::RenameColumn {
+            table: "visits".into(),
+            from: "note".into(),
+            to: "comment".into(),
+        })
+        .with(OutboxRewrite::DropColumn {
+            table: "visits".into(),
+            column: "qty".into(),
+        })
+        .with(OutboxRewrite::DropTable {
+            table: "settings".into(),
+        }),
     );
     let s = Store::open(path, manifest2.clone(), &v2, None).unwrap();
     let e = entries(&s);
-    let summary: Vec<(String, serde_json::Value)> =
-        e.iter().map(|e| (e.row_id.clone(), serde_json::Value::Object(e.fields.clone()))).collect();
+    let summary: Vec<(String, serde_json::Value)> = e
+        .iter()
+        .map(|e| {
+            (
+                e.row_id.clone(),
+                serde_json::Value::Object(e.fields.clone()),
+            )
+        })
+        .collect();
     assert_eq!(
         summary,
         vec![
@@ -229,13 +357,23 @@ fn migrations_run_once_and_rewrite_unsent_changes() {
     // Reopening does not run migration 2 again.
     let s = Store::open(path, manifest2, &v2, None).unwrap();
     assert_eq!(entries(&s).len(), 2);
-    s.execute("UPDATE visits SET comment = 'c' WHERE id = 'new'", &[]).unwrap();
-    assert_eq!(entries(&s).len(), 3, "triggers are installed for the new schema");
+    s.execute("UPDATE visits SET comment = 'c' WHERE id = 'new'", &[])
+        .unwrap();
+    assert_eq!(
+        entries(&s).len(),
+        3,
+        "triggers are installed for the new schema"
+    );
     let _ = std::fs::remove_dir_all(dir);
 }
 
 #[test]
 fn bad_migration_list_is_refused() {
-    let r = Store::open(":memory:", manifest(), &[Migration::sql(2, SCHEMA), Migration::sql(1, "")], Some("u"));
+    let r = Store::open(
+        ":memory:",
+        manifest(),
+        &[Migration::sql(2, SCHEMA), Migration::sql(1, "")],
+        Some("u"),
+    );
     assert!(r.is_err());
 }

@@ -34,13 +34,25 @@ impl Migration {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case")]
 pub enum OutboxRewrite {
-    RenameTable { from: String, to: String },
-    RenameColumn { table: String, from: String, to: String },
+    RenameTable {
+        from: String,
+        to: String,
+    },
+    RenameColumn {
+        table: String,
+        from: String,
+        to: String,
+    },
     /// Removes the field from unsent changes. Updates left with no fields
     /// are dropped; creations are kept.
-    DropColumn { table: String, column: String },
+    DropColumn {
+        table: String,
+        column: String,
+    },
     /// Drops unsent changes of the table.
-    DropTable { table: String },
+    DropTable {
+        table: String,
+    },
 }
 
 pub(crate) fn current_version(conn: &Connection) -> Result<i64, StoreError> {
@@ -83,11 +95,20 @@ pub(crate) fn apply(conn: &Connection, migrations: &[Migration]) -> Result<usize
 fn rewrite(conn: &Connection, r: &OutboxRewrite) -> Result<(), StoreError> {
     match r {
         OutboxRewrite::RenameTable { from, to } => {
-            conn.execute("UPDATE _sync_outbox SET tbl = ?2 WHERE tbl = ?1", params![from, to])?;
-            conn.execute("UPDATE _sync_rows SET tbl = ?2 WHERE tbl = ?1", params![from, to])?;
+            conn.execute(
+                "UPDATE _sync_outbox SET tbl = ?2 WHERE tbl = ?1",
+                params![from, to],
+            )?;
+            conn.execute(
+                "UPDATE _sync_rows SET tbl = ?2 WHERE tbl = ?1",
+                params![from, to],
+            )?;
         }
         OutboxRewrite::DropTable { table } => {
-            conn.execute("DELETE FROM _sync_outbox WHERE tbl = ?1 AND state = 'pending'", params![table])?;
+            conn.execute(
+                "DELETE FROM _sync_outbox WHERE tbl = ?1 AND state = 'pending'",
+                params![table],
+            )?;
             conn.execute("DELETE FROM _sync_rows WHERE tbl = ?1", params![table])?;
         }
         OutboxRewrite::RenameColumn { table, from, to } => {

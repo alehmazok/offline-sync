@@ -60,8 +60,12 @@ CREATE TABLE IF NOT EXISTS _sync_scopes (
 // ------------------------------------------------------------------ meta
 
 pub fn meta_get(conn: &Connection, key: &str) -> rusqlite::Result<Option<String>> {
-    conn.query_row("SELECT value FROM _sync_meta WHERE key = ?1", params![key], |r| r.get(0))
-        .optional()
+    conn.query_row(
+        "SELECT value FROM _sync_meta WHERE key = ?1",
+        params![key],
+        |r| r.get(0),
+    )
+    .optional()
 }
 
 pub fn meta_set(conn: &Connection, key: &str, value: &str) -> rusqlite::Result<()> {
@@ -110,7 +114,11 @@ pub fn pending(conn: &Connection, limit: usize) -> rusqlite::Result<Vec<OutboxEn
 }
 
 /// Pending entries of one scope in local order.
-pub fn pending_in_scope(conn: &Connection, scope: &str, limit: usize) -> rusqlite::Result<Vec<OutboxEntry>> {
+pub fn pending_in_scope(
+    conn: &Connection,
+    scope: &str,
+    limit: usize,
+) -> rusqlite::Result<Vec<OutboxEntry>> {
     conn.prepare(&format!(
         "SELECT {ENTRY_COLS} FROM _sync_outbox WHERE state = 'pending' AND scope = ?1 ORDER BY seq LIMIT ?2"
     ))?
@@ -119,7 +127,11 @@ pub fn pending_in_scope(conn: &Connection, scope: &str, limit: usize) -> rusqlit
 }
 
 /// All unsent entries, pending or sent, of one row, in local order.
-pub fn entries_for_row(conn: &Connection, tbl: &str, row_id: &str) -> rusqlite::Result<Vec<OutboxEntry>> {
+pub fn entries_for_row(
+    conn: &Connection,
+    tbl: &str,
+    row_id: &str,
+) -> rusqlite::Result<Vec<OutboxEntry>> {
     conn.prepare(&format!(
         "SELECT {ENTRY_COLS} FROM _sync_outbox WHERE tbl = ?1 AND row_id = ?2 ORDER BY seq"
     ))?
@@ -140,7 +152,11 @@ pub fn delete_entries(conn: &Connection, seqs: &[i64]) -> rusqlite::Result<()> {
 }
 
 /// Remove pending entries of a row. Returns how many were removed.
-pub fn delete_pending_for_row(conn: &Connection, tbl: &str, row_id: &str) -> rusqlite::Result<usize> {
+pub fn delete_pending_for_row(
+    conn: &Connection,
+    tbl: &str,
+    row_id: &str,
+) -> rusqlite::Result<usize> {
     conn.execute(
         "DELETE FROM _sync_outbox WHERE tbl = ?1 AND row_id = ?2 AND state = 'pending'",
         params![tbl, row_id],
@@ -189,13 +205,19 @@ pub fn sent_batch(conn: &Connection) -> Result<Option<SentBatch>, StoreError> {
 }
 
 /// Record a batch as sent and freeze its entries. Returns the batch ID.
-pub fn record_sent(conn: &Connection, scope: &str, body: &str, map: &[(String, Vec<i64>)]) -> Result<i64, StoreError> {
+pub fn record_sent(
+    conn: &Connection,
+    scope: &str,
+    body: &str,
+    map: &[(String, Vec<i64>)],
+) -> Result<i64, StoreError> {
     conn.execute(
         "INSERT INTO _sync_batches (scope, body, map) VALUES (?1, ?2, ?3)",
         params![scope, body, serde_json::to_string(map)?],
     )?;
     let id = conn.last_insert_rowid();
-    let mut stmt = conn.prepare("UPDATE _sync_outbox SET state = 'sent', batch_id = ?2 WHERE seq = ?1")?;
+    let mut stmt =
+        conn.prepare("UPDATE _sync_outbox SET state = 'sent', batch_id = ?2 WHERE seq = ?1")?;
     for (_, seqs) in map {
         for s in seqs {
             stmt.execute(params![s, id])?;
@@ -210,7 +232,10 @@ pub fn finish_batch(conn: &Connection, batch_id: i64) -> rusqlite::Result<()> {
         "UPDATE _sync_outbox SET state = 'pending', batch_id = NULL WHERE batch_id = ?1",
         params![batch_id],
     )?;
-    conn.execute("DELETE FROM _sync_batches WHERE batch_id = ?1", params![batch_id])?;
+    conn.execute(
+        "DELETE FROM _sync_batches WHERE batch_id = ?1",
+        params![batch_id],
+    )?;
     Ok(())
 }
 
@@ -249,7 +274,14 @@ pub fn row_state(conn: &Connection, tbl: &str, row_id: &str) -> rusqlite::Result
 }
 
 /// The local row now reflects server version `version`.
-pub fn set_pulled(conn: &Connection, tbl: &str, row_id: &str, scope: &str, version: i64, mark: i64) -> rusqlite::Result<()> {
+pub fn set_pulled(
+    conn: &Connection,
+    tbl: &str,
+    row_id: &str,
+    scope: &str,
+    version: i64,
+    mark: i64,
+) -> rusqlite::Result<()> {
     conn.execute(
         "INSERT INTO _sync_rows (tbl, row_id, scope, pulled_version, known_version, mark)
          VALUES (?1, ?2, ?3, ?4, ?4, ?5)
@@ -264,7 +296,13 @@ pub fn set_pulled(conn: &Connection, tbl: &str, row_id: &str, scope: &str, versi
 
 /// The server holds this device's change at `version`; the local row may
 /// not yet reflect other changes merged into it.
-pub fn set_known(conn: &Connection, tbl: &str, row_id: &str, scope: &str, version: i64) -> rusqlite::Result<()> {
+pub fn set_known(
+    conn: &Connection,
+    tbl: &str,
+    row_id: &str,
+    scope: &str,
+    version: i64,
+) -> rusqlite::Result<()> {
     conn.execute(
         "INSERT INTO _sync_rows (tbl, row_id, scope, pulled_version, known_version)
          VALUES (?1, ?2, ?3, 0, ?4)
@@ -275,7 +313,10 @@ pub fn set_known(conn: &Connection, tbl: &str, row_id: &str, scope: &str, versio
 }
 
 pub fn delete_row_state(conn: &Connection, tbl: &str, row_id: &str) -> rusqlite::Result<()> {
-    conn.execute("DELETE FROM _sync_rows WHERE tbl = ?1 AND row_id = ?2", params![tbl, row_id])?;
+    conn.execute(
+        "DELETE FROM _sync_rows WHERE tbl = ?1 AND row_id = ?2",
+        params![tbl, row_id],
+    )?;
     Ok(())
 }
 
@@ -292,18 +333,20 @@ pub struct ScopeState {
 }
 
 pub fn scopes(conn: &Connection) -> rusqlite::Result<Vec<ScopeState>> {
-    conn.prepare("SELECT scope, access, cursor, state, resync_gen FROM _sync_scopes ORDER BY scope")?
-        .query_map([], |r| {
-            let access: String = r.get(1)?;
-            Ok(ScopeState {
-                scope: r.get(0)?,
-                access: Access::parse(&access).unwrap_or(Access::Read),
-                cursor: r.get(2)?,
-                state: r.get(3)?,
-                resync_gen: r.get(4)?,
-            })
-        })?
-        .collect()
+    conn.prepare(
+        "SELECT scope, access, cursor, state, resync_gen FROM _sync_scopes ORDER BY scope",
+    )?
+    .query_map([], |r| {
+        let access: String = r.get(1)?;
+        Ok(ScopeState {
+            scope: r.get(0)?,
+            access: Access::parse(&access).unwrap_or(Access::Read),
+            cursor: r.get(2)?,
+            state: r.get(3)?,
+            resync_gen: r.get(4)?,
+        })
+    })?
+    .collect()
 }
 
 pub fn scope_state(conn: &Connection, scope: &str) -> rusqlite::Result<Option<ScopeState>> {
@@ -320,11 +363,19 @@ pub fn upsert_scope(conn: &Connection, scope: &str, access: Access) -> rusqlite:
 }
 
 pub fn set_cursor(conn: &Connection, scope: &str, cursor: Option<&str>) -> rusqlite::Result<()> {
-    conn.execute("UPDATE _sync_scopes SET cursor = ?2 WHERE scope = ?1", params![scope, cursor])?;
+    conn.execute(
+        "UPDATE _sync_scopes SET cursor = ?2 WHERE scope = ?1",
+        params![scope, cursor],
+    )?;
     Ok(())
 }
 
-pub fn set_scope_state(conn: &Connection, scope: &str, state: &str, resync_gen: i64) -> rusqlite::Result<()> {
+pub fn set_scope_state(
+    conn: &Connection,
+    scope: &str,
+    state: &str,
+    resync_gen: i64,
+) -> rusqlite::Result<()> {
     conn.execute(
         "UPDATE _sync_scopes SET state = ?2, resync_gen = ?3 WHERE scope = ?1",
         params![scope, state, resync_gen],
@@ -335,4 +386,41 @@ pub fn set_scope_state(conn: &Connection, scope: &str, state: &str, resync_gen: 
 pub fn delete_scope(conn: &Connection, scope: &str) -> rusqlite::Result<()> {
     conn.execute("DELETE FROM _sync_scopes WHERE scope = ?1", params![scope])?;
     Ok(())
+}
+
+// ------------------------------------------------------------------ scope removal
+
+/// Remove the engine's state for a scope: its unsent changes, sent batches,
+/// row versions and the scope itself. Returns how many unsent changes were
+/// dropped. The app's rows are removed separately with
+/// [`crate::delete_scope_rows`].
+pub fn purge_scope(conn: &Connection, scope: &str) -> rusqlite::Result<i64> {
+    let dropped: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM _sync_outbox WHERE scope = ?1",
+        params![scope],
+        |r| r.get(0),
+    )?;
+    conn.execute("DELETE FROM _sync_outbox WHERE scope = ?1", params![scope])?;
+    conn.execute("DELETE FROM _sync_batches WHERE scope = ?1", params![scope])?;
+    conn.execute("DELETE FROM _sync_rows WHERE scope = ?1", params![scope])?;
+    conn.execute("DELETE FROM _sync_scopes WHERE scope = ?1", params![scope])?;
+    Ok(dropped)
+}
+
+/// Forget all sync state. Used on sign-out.
+pub fn clear_all(conn: &Connection) -> rusqlite::Result<()> {
+    conn.execute_batch(
+        "DELETE FROM _sync_outbox; DELETE FROM _sync_batches; DELETE FROM _sync_rows; DELETE FROM _sync_scopes;",
+    )
+}
+
+/// Pending entries of scopes other than `writable`, in local order.
+pub fn pending_outside(
+    conn: &Connection,
+    writable: &[String],
+) -> rusqlite::Result<Vec<OutboxEntry>> {
+    Ok(pending(conn, i64::MAX as usize)?
+        .into_iter()
+        .filter(|e| !writable.contains(&e.scope))
+        .collect())
 }

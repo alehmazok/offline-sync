@@ -1,6 +1,16 @@
 [package]
 name = "sync-net"
+description = "HTTP transport and protocol client for offline-sync, with retry and token refresh."
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
 
 [dependencies]
+sync-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+ureq.workspace = true
+thiserror.workspace = true
+log.workspace = true

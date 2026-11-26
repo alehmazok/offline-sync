@@ -105,7 +105,12 @@ pub fn table_triggers(t: &TableSpec) -> Vec<String> {
         let removals: Vec<String> = t
             .columns
             .iter()
-            .map(|c| format!("CASE WHEN OLD.{qc} IS NEW.{qc} THEN '$.{c}' ELSE '$.__none' END", qc = q(c)))
+            .map(|c| {
+                format!(
+                    "CASE WHEN OLD.{qc} IS NEW.{qc} THEN '$.{c}' ELSE '$.__none' END",
+                    qc = q(c)
+                )
+            })
             .collect();
         let fields = format!("json_remove({all_fields}, {})", removals.join(", "));
         out.push(format!(
@@ -127,7 +132,9 @@ pub fn table_triggers(t: &TableSpec) -> Vec<String> {
 /// Drop every engine trigger and create the ones the manifest needs.
 pub fn install(conn: &Connection, manifest: &Manifest) -> rusqlite::Result<()> {
     let existing: Vec<String> = conn
-        .prepare("SELECT name FROM sqlite_master WHERE type = 'trigger' AND substr(name, 1, ?1) = ?2")?
+        .prepare(
+            "SELECT name FROM sqlite_master WHERE type = 'trigger' AND substr(name, 1, ?1) = ?2",
+        )?
         .query_map(rusqlite::params![PREFIX.len() as i64, PREFIX], |r| r.get(0))?
         .collect::<Result<_, _>>()?;
     for name in existing {
