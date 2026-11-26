@@ -8,6 +8,10 @@ import 'package:offline_sync/offline_sync.dart';
 
 import 'sync_setup.dart';
 
+/// Set by CI (`--dart-define=SMOKE=true`): on start, write a note and sync
+/// it, so CI can find the note on the server.
+const _smoke = bool.fromEnvironment('SMOKE');
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const DemoApp());
@@ -78,6 +82,10 @@ class _NotesPageState extends State<NotesPage> {
         _deviceId = deviceId;
       });
       scheduler.start();
+      if (_smoke) {
+        await addNote(e, 'smoke $deviceId');
+        await e.syncNow();
+      }
     } catch (err) {
       setState(() => _openError = err);
     }

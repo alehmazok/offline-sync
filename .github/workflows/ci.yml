@@ -212,7 +212,7 @@ jobs:
       - name: Build for the simulator
         timeout-minutes: 25
         working-directory: bindings/flutter/example
-        run: flutter build ios --simulator --debug 2>&1 | tee "$LOGS/build-ios.log"
+        run: flutter build ios --simulator --debug --dart-define=SMOKE=true 2>&1 | tee "$LOGS/build-ios.log"
 
       - name: Start reference server
         run: |
@@ -235,21 +235,23 @@ jobs:
       - name: Launch the example on the simulator
         timeout-minutes: 10
         working-directory: bindings/flutter/example
-        # Runs the app built above outside the test harness and reads its
-        # console: proves the native library loads and a sync succeeds.
+        # Runs the app built above (with SMOKE=true) outside the test
+        # harness: it writes a note and syncs it. Finding the note on the
+        # server proves the native library loads and a sync succeeds.
         run: |
           xcrun simctl install "$SIM_UDID" build/ios/iphonesimulator/Runner.app
-          perl -e 'alarm 120; exec @ARGV' xcrun simctl launch --console-pty "$SIM_UDID" \
-            dev.offlinesync.offlineSyncExample 2>&1 | tee "$LOGS/launch-ios.log" &
-          for i in $(seq 1 110); do
-            if grep -q 'offline_sync: synced' "$LOGS/launch-ios.log"; then
-              echo "synced on the simulator"
+          xcrun simctl launch "$SIM_UDID" dev.offlinesync.offlineSyncExample | tee "$LOGS/launch-ios.log"
+          for i in $(seq 1 120); do
+            body=$(curl -s -H 'Authorization: Bearer demo' -H 'X-Sync-Schema: 1' -H 'X-Sync-Device: ci' \
+              'http://127.0.0.1:8080/sync/v1/scopes/team:demo/changes')
+            if echo "$body" | grep -q '"smoke '; then
+              echo "The app's note reached the server: $body" | tee -a "$LOGS/launch-ios.log"
               xcrun simctl terminate "$SIM_UDID" dev.offlinesync.offlineSyncExample || true
               exit 0
             fi
             sleep 1
           done
-          echo "no sync within 110 s" | tee -a "$LOGS/launch-ios.log"
+          echo "No note from the app on the server after 120 s. Last response: $body" | tee -a "$LOGS/launch-ios.log"
           exit 1
       - name: Integration test on the simulator
         # `flutter test` on hosted macOS runners often cannot attach to the
